@@ -3,18 +3,24 @@
     "name": "Platz 1",
     "lat": 47.0441387,
     "lng": 8.3157904,
-    "image": "platz1.jpg"
+    "image": "bilder/platz1.jpg",
+    "info": "Am Platz 1 stand früher die alte Fabrik. Hier trifft Vergangenheit die Gegenwart.",
+    "audio": "audio/platz1.wav"
   },
   {
     "name": "Inseli Park",
     "lat": 47.047,
     "lng": 8.31,
-    "image": "bilder/platz2.jpg"
+    "image": "bilder/platz2.jpg",
+    "info": "Beliebter Treffpunkt direkt am See. Früher Umschlagplatz für Güter.",
+    "audio": "audio/platz2.wav"
   },
   {
     "name": "Lido Luzern",
     "lat": 47.06,
     "lng": 8.335,
-    "image": "bilder/platz3.jpg"
+    "image": "bilder/platz3.jpg",
+    "info": "Badeort mit langer Tradition – Sommerfrische seit Jahrzehnten.",
+    "audio": "audio/platz3.wav"
   }
 ]
