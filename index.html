@@ -3,25 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Früher/Heute Ansicht (GPS)</title>
+  <title>Früher/Heute Ansicht (GPS + Radius)</title>
   <style>
     body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; font-family: system-ui, sans-serif; }
     #video, #overlay {
       position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
     }
-    #overlay { transform-origin: center center; will-change: transform, opacity; }
+    #overlay { transform-origin: center center; will-change: opacity; display:none; }
     #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.75) 100%); z-index:10; }
     input[type=range] { width:100%; }
-    .btn { appearance:none; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); color:#fff; padding:10px 12px; border-radius:12px; font-weight:600; }
-    #hint { position:absolute; top:10px; left:10px; right:10px; color:#fff; z-index:11; background:rgba(0,0,0,.45); padding:8px 10px; border-radius:10px; font-size:14px; }
-    #status { position:absolute; top:50px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.6); padding:6px 10px; border-radius:10px; font-size:13px; }
+    #status { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.6); padding:8px 10px; border-radius:10px; font-size:14px; z-index:11; }
   </style>
 </head>
 <body>
-  <div id="hint">📍 GPS-Modus: Das passende Foto wird automatisch nach Standort geladen.</div>
   <div id="status">⏳ Standort wird ermittelt…</div>
   <video id="video" autoplay playsinline webkit-playsinline muted></video>
-  <img id="overlay" src="" style="opacity:0.6; display:none;">
+  <img id="overlay" src="" style="opacity:0.6">
   <div id="ui">
     <input type="range" min="0" max="100" value="60" id="opacity">
   </div>
@@ -29,6 +26,7 @@
   <script>
     const overlay = document.getElementById('overlay');
     const statusBox = document.getElementById('status');
+    const RADIUS_KM = 0.2; // <-- Reichweite in km (z.B. 0.2 = 200 Meter)
 
     // Kamera starten
     (async function startCam(){
@@ -59,28 +57,30 @@
     }
 
     function findNearest(lat,lng){
-      let best=null, bestDist=1e9;
+      let best=null, bestDist=Infinity;
       for(const o of orte){
         const d=distKm(lat,lng,o.lat,o.lng);
         if(d<bestDist){ bestDist=d; best=o; }
       }
-      return best;
+      return {best, distanceKm: bestDist};
     }
 
     // GPS holen
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(pos=>{
         const {latitude,longitude}=pos.coords;
-        statusBox.textContent='📍 Position: '+latitude.toFixed(5)+', '+longitude.toFixed(5);
-        const ort=findNearest(latitude,longitude);
-        if(ort){
-          statusBox.textContent+=' → Nächster Ort: '+ort.name;
-          overlay.src=ort.image+'?v='+Date.now();
+        const {best, distanceKm} = findNearest(latitude,longitude);
+        statusBox.textContent='📍 '+latitude.toFixed(5)+', '+longitude.toFixed(5)+' | Nächster Ort: '+(best?best.name:'—')+' ('+distanceKm.toFixed(2)+' km)';
+        if(best && distanceKm < RADIUS_KM){
+          overlay.src = best.image + '?v=' + Date.now(); // Cache-Busting
           overlay.style.display='block';
+        } else {
+          overlay.style.display='none';
+          statusBox.textContent += ' → Kein Ort in Reichweite (Radius '+RADIUS_KM+' km)';
         }
       }, err=>{
         statusBox.textContent='❌ Standort-Fehler: '+err.message;
-      });
+      }, { enableHighAccuracy:true, timeout:10000, maximumAge:0 });
     } else {
       statusBox.textContent='❌ GPS nicht unterstützt';
     }
