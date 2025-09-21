@@ -4,15 +4,17 @@
   <meta charset="UTF-8">
   <title>Früher/Heute Ansicht</title>
   <style>
-    body, html { margin:0; padding:0; height:100%; overflow:hidden; }
+    body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
     #video, #overlay {
       position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
     }
     #sliderWrap { position:absolute; bottom:20px; left:0; right:0; text-align:center; }
     input[type=range] { width:80%; }
+    #error { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:red; padding:10px; display:none; z-index:1000; }
   </style>
 </head>
 <body>
+  <div id="error"></div>
   <video id="video" autoplay playsinline></video>
   <img id="overlay" src="alt.jpg" style="opacity:0.5">
   <div id="sliderWrap">
@@ -20,12 +22,27 @@
   </div>
 
   <script>
-    // Kamera starten
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => { document.getElementById('video').srcObject = stream; })
-      .catch(err => alert("Kamera nicht verfügbar: " + err));
+    const video = document.getElementById('video');
+    const errorBox = document.getElementById('error');
 
-    // Slider steuert Transparenz
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: { exact: "environment" } } 
+        });
+        video.srcObject = stream;
+      } catch (err1) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+        } catch (err2) {
+          errorBox.innerText = "Kamera konnte nicht gestartet werden: " + err2.message;
+          errorBox.style.display = "block";
+        }
+      }
+    }
+    startCamera();
+
     const overlay = document.getElementById('overlay');
     document.getElementById('slider').addEventListener('input', e => {
       overlay.style.opacity = e.target.value / 100;
