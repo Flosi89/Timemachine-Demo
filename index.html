@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Früher/Heute Ansicht (GPS + Radius + Debug)</title>
+  <title>Früher/Heute Ansicht (GPS + Gesten)</title>
   <style>
     body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; font-family: system-ui, sans-serif; }
-    #video { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:0; }
+    #video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
     #overlay {
-      position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
-      transform-origin:center center; will-change:opacity;
-      z-index:5; display:none; opacity:0.9; outline: 2px dashed rgba(255,255,255,.6);
+      position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+      transform-origin:center center; will-change:transform, opacity; z-index:5; display:none;
     }
-    #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.75) 100%); z-index:10; }
+    #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px;
+          background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.75) 100%); z-index:10; }
     input[type=range] { width:100%; }
     #status { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.7); padding:8px 10px; border-radius:10px; font-size:14px; z-index:11; white-space:pre-wrap; }
     #reload { position:absolute; top:10px; right:10px; z-index:12; padding:10px 12px; border-radius:10px; border:none; background:#1976d2; color:#fff; font-weight:700; }
@@ -24,7 +24,7 @@
   <video id="video" autoplay playsinline webkit-playsinline muted></video>
   <img id="overlay" src="">
   <div id="ui">
-    <input type="range" min="0" max="100" value="90" id="opacity">
+    <input type="range" min="0" max="100" value="70" id="opacity">
   </div>
 
   <script>
@@ -113,9 +113,63 @@
     reloadBtn.addEventListener('click', checkGPS);
     (async ()=>{ await loadOrte(); await checkGPS(); })();
 
+    // Opacity slider
     document.getElementById('opacity').addEventListener('input', e=>{
       overlay.style.opacity = e.target.value/100;
     });
+
+    // --- Gestensteuerung (Pan / Pinch / Rotate) ---
+    overlay.style.touchAction = "none"; // wichtig für Pointer-Events
+    let state = { x:0, y:0, scale:1, rot:0 };
+    function apply(){ overlay.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`; }
+
+    // Pointer für 1-Finger Drag
+    let dragging = false, last = {x:0,y:0};
+    overlay.addEventListener('pointerdown', e=>{
+      if (e.target.closest('#ui')) return; // UI nicht blockieren
+      dragging = true; last = {x:e.clientX, y:e.clientY}; overlay.setPointerCapture(e.pointerId);
+    });
+    overlay.addEventListener('pointermove', e=>{
+      if(!dragging) return;
+      const dx = e.clientX - last.x; const dy = e.clientY - last.y;
+      state.x += dx; state.y += dy; last = {x:e.clientX, y:e.clientY}; apply();
+    });
+    overlay.addEventListener('pointerup', ()=> dragging=false);
+    overlay.addEventListener('pointercancel', ()=> dragging=false);
+
+    // Touch für 2-Finger Pinch/Rotate
+    let twoStart = null;
+    function tdist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+    function tangle(a,b){ return Math.atan2(b.clientY-a.clientY, b.clientX-a.clientX) * 180/Math.PI; }
+    function tcenter(a,b){ return { x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 }; }
+
+    overlay.addEventListener('touchstart', (e)=>{
+      if (e.target.closest('#ui')) return;
+      if(e.touches.length===2){
+        const [t1,t2]=[e.touches[0], e.touches[1]];
+        twoStart = { dist: tdist(t1,t2), angle: tangle(t1,t2), center: tcenter(t1,t2),
+                     baseScale: state.scale, baseRot: state.rot, baseX: state.x, baseY: state.y };
+      }
+    }, {passive:false});
+
+    overlay.addEventListener('touchmove', (e)=>{
+      if (e.target.closest('#ui')) return;
+      if(e.touches.length===2 && twoStart){
+        e.preventDefault();
+        const [t1,t2]=[e.touches[0], e.touches[1]];
+        const scaleFactor = tdist(t1,t2)/Math.max(1,twoStart.dist);
+        const rotDelta = tangle(t1,t2) - twoStart.angle;
+        state.scale = Math.max(0.2, Math.min(5, twoStart.baseScale * scaleFactor));
+        state.rot = twoStart.baseRot + rotDelta;
+        const c = tcenter(t1,t2);
+        state.x = twoStart.baseX + (c.x - twoStart.center.x);
+        state.y = twoStart.baseY + (c.y - twoStart.center.y);
+        apply();
+      }
+    }, {passive:false});
+
+    overlay.addEventListener('touchend', ()=>{ twoStart=null; });
+    overlay.addEventListener('touchcancel', ()=>{ twoStart=null; });
   </script>
 </body>
 </html>
