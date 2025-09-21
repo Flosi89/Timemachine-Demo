@@ -3,9 +3,9 @@
     "name": "Platz 1",
     "lat": 47.0441387,
     "lng": 8.3157904,
-    "image": "bilder/platz1.jpg",
-    "info": "Am Platz 1 stand früher die alte Fabrik. Hier trifft Vergangenheit die Gegenwart.",
-    "audio": "audio/platz1.wav"
+    "image": "platz1.jpg",
+    "info": "In diesem Wohnzimmer wird Geschichte geschrieben. Hier trifft Vergangenheit die Gegenwart.",
+    "audio": "platz1.wav"
   },
   {
     "name": "Inseli Park",
