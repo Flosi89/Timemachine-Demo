@@ -20,7 +20,7 @@
 <body>
   <div id="hint">🔧 Tipp: Mit einem Finger ziehen (verschieben). Mit zwei Fingern zusammen/auseinander (zoomen) & drehen (rotieren). Unten: Transparenz & Reset.</div>
   <video id="video" autoplay playsinline webkit-playsinline muted></video>
-  <img id="overlay" src="alt.jpg?ver=3" style="opacity:0.6">
+  <img id="overlay" src="alt.jpg?ver=5" style="opacity:0.6">
   <div id="ui">
     <div class="row">
       <input type="range" min="0" max="100" value="60" id="opacity">
@@ -31,12 +31,11 @@
   </div>
 
   <script>
-    // Kamera starten (wie v3)
+    // Kamera starten
     (async function startCam(){
       try{
         const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}},audio:false});
-        video.srcObject=s;
-        await video.play().catch(()=>{});
+        video.srcObject=s; await video.play().catch(()=>{});
       }catch(e1){
         try{
           const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
@@ -50,22 +49,23 @@
 
     // Komfort: Pan / Pinch-Zoom / Rotate
     const overlay = document.getElementById('overlay');
-    let state = { x:0, y:0, scale:1, rot:0 }; // Translation in px, scale, rotation in deg
+    let state = { x:0, y:0, scale:1, rot:0 };
     let activeTouches = new Map();
+    let start = null;
 
     function applyTransform(){
       overlay.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`;
     }
     applyTransform();
 
-    function dist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
+    function dist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
     function angle(a,b){ return Math.atan2(b.clientY-a.clientY, b.clientX-a.clientX) * 180/Math.PI; }
     function center(a,b){ return { x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 }; }
 
-    let start = null; // gesture start
     const overlayWrap = document.body;
 
     overlayWrap.addEventListener('touchstart', (e)=>{
+      if (e.target.closest('#ui')) return; // UI nicht blockieren
       for(const t of e.changedTouches) activeTouches.set(t.identifier, t);
       if(activeTouches.size===1){
         const t = activeTouches.values().next().value;
@@ -78,6 +78,7 @@
     }, {passive:false});
 
     overlayWrap.addEventListener('touchmove', (e)=>{
+      if (e.target.closest('#ui')) return;
       e.preventDefault();
       for(const t of e.changedTouches) activeTouches.set(t.identifier, t);
       if(!start) return;
@@ -91,7 +92,6 @@
         const rotDelta = angle(t1,t2) - start.startAngle;
         state.scale = Math.max(0.2, Math.min(5, start.baseScale * scaleFactor));
         state.rot = start.baseRot + rotDelta;
-        // optional: translate roughly with center movement
         const c = center(t1,t2);
         state.x = start.baseX + (c.x - start.startCenter.x);
         state.y = start.baseY + (c.y - start.startCenter.y);
