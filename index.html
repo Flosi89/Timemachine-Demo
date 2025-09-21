@@ -3,34 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Früher/Heute Ansicht</title>
+  <title>Früher/Heute Ansicht (GPS)</title>
   <style>
-    body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; font-family: system-ui, sans-serif; }
     #video, #overlay {
       position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
     }
     #overlay { transform-origin: center center; will-change: transform, opacity; }
     #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.75) 100%); z-index:10; }
-    .row { display:flex; align-items:center; gap:10px; }
     input[type=range] { width:100%; }
     .btn { appearance:none; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); color:#fff; padding:10px 12px; border-radius:12px; font-weight:600; }
     #hint { position:absolute; top:10px; left:10px; right:10px; color:#fff; z-index:11; background:rgba(0,0,0,.45); padding:8px 10px; border-radius:10px; font-size:14px; }
+    #status { position:absolute; top:50px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.6); padding:6px 10px; border-radius:10px; font-size:13px; }
   </style>
 </head>
 <body>
-  <div id="hint">🔧 Tipp: Mit einem Finger ziehen (verschieben). Mit zwei Fingern zusammen/auseinander (zoomen) & drehen (rotieren). Unten: Transparenz & Reset.</div>
+  <div id="hint">📍 GPS-Modus: Das passende Foto wird automatisch nach Standort geladen.</div>
+  <div id="status">⏳ Standort wird ermittelt…</div>
   <video id="video" autoplay playsinline webkit-playsinline muted></video>
-  <img id="overlay" src="alt.jpg?ver=5" style="opacity:0.6">
+  <img id="overlay" src="" style="opacity:0.6; display:none;">
   <div id="ui">
-    <div class="row">
-      <input type="range" min="0" max="100" value="60" id="opacity">
-    </div>
-    <div class="row">
-      <button class="btn" id="reset">Zurücksetzen</button>
-    </div>
+    <input type="range" min="0" max="100" value="60" id="opacity">
   </div>
 
   <script>
+    const overlay = document.getElementById('overlay');
+    const statusBox = document.getElementById('status');
+
     // Kamera starten
     (async function startCam(){
       try{
@@ -47,76 +46,48 @@
       }
     })();
 
-    // Komfort: Pan / Pinch-Zoom / Rotate
-    const overlay = document.getElementById('overlay');
-    let state = { x:0, y:0, scale:1, rot:0 };
-    let activeTouches = new Map();
-    let start = null;
+    // Orte laden
+    let orte = [];
+    fetch('orte.json').then(r=>r.json()).then(data=>{ orte = data; });
 
-    function applyTransform(){
-      overlay.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`;
+    function distKm(lat1,lng1,lat2,lng2){
+      const R=6371; // km
+      const dLat=(lat2-lat1)*Math.PI/180;
+      const dLon=(lng2-lng1)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
-    applyTransform();
 
-    function dist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
-    function angle(a,b){ return Math.atan2(b.clientY-a.clientY, b.clientX-a.clientX) * 180/Math.PI; }
-    function center(a,b){ return { x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 }; }
-
-    const overlayWrap = document.body;
-
-    overlayWrap.addEventListener('touchstart', (e)=>{
-      if (e.target.closest('#ui')) return; // UI nicht blockieren
-      for(const t of e.changedTouches) activeTouches.set(t.identifier, t);
-      if(activeTouches.size===1){
-        const t = activeTouches.values().next().value;
-        start = { mode:'pan', x:t.clientX, y:t.clientY, baseX:state.x, baseY:state.y };
-      } else if(activeTouches.size>=2){
-        const [t1,t2] = [...activeTouches.values()].slice(0,2);
-        start = { mode:'pinch', baseScale:state.scale, baseRot:state.rot, baseX:state.x, baseY:state.y,
-                  startDist: dist(t1,t2), startAngle: angle(t1,t2), startCenter: center(t1,t2) };
+    function findNearest(lat,lng){
+      let best=null, bestDist=1e9;
+      for(const o of orte){
+        const d=distKm(lat,lng,o.lat,o.lng);
+        if(d<bestDist){ bestDist=d; best=o; }
       }
-    }, {passive:false});
+      return best;
+    }
 
-    overlayWrap.addEventListener('touchmove', (e)=>{
-      if (e.target.closest('#ui')) return;
-      e.preventDefault();
-      for(const t of e.changedTouches) activeTouches.set(t.identifier, t);
-      if(!start) return;
-      if(start.mode==='pan' && activeTouches.size===1){
-        const t = activeTouches.values().next().value;
-        state.x = start.baseX + (t.clientX - start.x);
-        state.y = start.baseY + (t.clientY - start.y);
-      } else if(start.mode==='pinch' && activeTouches.size>=2){
-        const [t1,t2] = [...activeTouches.values()].slice(0,2);
-        const scaleFactor = dist(t1,t2) / Math.max(1, start.startDist);
-        const rotDelta = angle(t1,t2) - start.startAngle;
-        state.scale = Math.max(0.2, Math.min(5, start.baseScale * scaleFactor));
-        state.rot = start.baseRot + rotDelta;
-        const c = center(t1,t2);
-        state.x = start.baseX + (c.x - start.startCenter.x);
-        state.y = start.baseY + (c.y - start.startCenter.y);
-      }
-      applyTransform();
-    }, {passive:false});
-
-    overlayWrap.addEventListener('touchend', (e)=>{
-      for(const t of e.changedTouches) activeTouches.delete(t.identifier);
-      if(activeTouches.size===0) start=null;
-    });
-    overlayWrap.addEventListener('touchcancel', (e)=>{
-      for(const t of e.changedTouches) activeTouches.delete(t.identifier);
-      if(activeTouches.size===0) start=null;
-    });
+    // GPS holen
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const {latitude,longitude}=pos.coords;
+        statusBox.textContent='📍 Position: '+latitude.toFixed(5)+', '+longitude.toFixed(5);
+        const ort=findNearest(latitude,longitude);
+        if(ort){
+          statusBox.textContent+=' → Nächster Ort: '+ort.name;
+          overlay.src=ort.image+'?v='+Date.now();
+          overlay.style.display='block';
+        }
+      }, err=>{
+        statusBox.textContent='❌ Standort-Fehler: '+err.message;
+      });
+    } else {
+      statusBox.textContent='❌ GPS nicht unterstützt';
+    }
 
     // Opacity slider
     document.getElementById('opacity').addEventListener('input', e=>{
       overlay.style.opacity = e.target.value/100;
-    });
-
-    // Reset
-    document.getElementById('reset').addEventListener('click', ()=>{
-      state = { x:0, y:0, scale:1, rot:0 };
-      applyTransform();
     });
   </script>
 </body>

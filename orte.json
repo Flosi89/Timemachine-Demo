@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Tribschenplatz",
+    "lat": 47.041,
+    "lng": 8.312,
+    "image": "bilder/platz1.jpg"
+  },
+  {
+    "name": "Inseli Park",
+    "lat": 47.047,
+    "lng": 8.31,
+    "image": "bilder/platz2.jpg"
+  },
+  {
+    "name": "Lido Luzern",
+    "lat": 47.06,
+    "lng": 8.335,
+    "image": "bilder/platz3.jpg"
+  }
+]
