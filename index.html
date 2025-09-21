@@ -9,85 +9,114 @@
     #video, #overlay {
       position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
     }
-    #sliderWrap { position:absolute; bottom:20px; left:0; right:0; text-align:center; z-index: 10; }
-    input[type=range] { width:80%; }
-    #error { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:#c62828; padding:10px; display:none; z-index:1000; border-radius:8px; }
-    #startBtn { position:absolute; top:10px; right:10px; z-index:1001; padding:10px 12px; border:none; border-radius:10px; background:#1976d2; color:#fff; font-weight:600; }
-    #status { position:absolute; top:10px; left:10px; z-index:1002; background:rgba(0,0,0,.6); color:#fff; padding:6px 10px; border-radius:10px; font-size:13px; }
+    #overlay { transform-origin: center center; will-change: transform, opacity; }
+    #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.75) 100%); z-index:10; }
+    .row { display:flex; align-items:center; gap:10px; }
+    input[type=range] { width:100%; }
+    .btn { appearance:none; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.1); color:#fff; padding:10px 12px; border-radius:12px; font-weight:600; }
+    #hint { position:absolute; top:10px; left:10px; right:10px; color:#fff; z-index:11; background:rgba(0,0,0,.45); padding:8px 10px; border-radius:10px; font-size:14px; }
   </style>
 </head>
 <body>
-  <div id="status">Status: ⏳ wartet…</div>
-  <div id="error"></div>
-  <button id="startBtn">Kamera starten</button>
+  <div id="hint">🔧 Tipp: Mit einem Finger ziehen (verschieben). Mit zwei Fingern zusammen/auseinander (zoomen) & drehen (rotieren). Unten: Transparenz & Reset.</div>
   <video id="video" autoplay playsinline webkit-playsinline muted></video>
-  <img id="overlay" src="alt.jpg" style="opacity:0.5">
-  <div id="sliderWrap">
-    <input type="range" min="0" max="100" value="50" id="slider">
+  <img id="overlay" src="alt.jpg?ver=3" style="opacity:0.6">
+  <div id="ui">
+    <div class="row">
+      <input type="range" min="0" max="100" value="60" id="opacity">
+    </div>
+    <div class="row">
+      <button class="btn" id="reset">Zurücksetzen</button>
+    </div>
   </div>
 
   <script>
-    const video = document.getElementById('video');
-    const errorBox = document.getElementById('error');
-    const statusBox = document.getElementById('status');
-    const startBtn = document.getElementById('startBtn');
-
-    async function startCamera(preferRear=true) {
-      try {
-        statusBox.textContent = 'Status: 🎥 Anfrage an Kamera…';
-        const constraints = preferRear ? { video: { facingMode: { exact: 'environment' } }, audio: false }
-                                       : { video: true, audio: false };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = stream;
-        video.muted = true; // iOS verlangt mute für Autoplay
+    // Kamera starten (wie v3)
+    (async function startCam(){
+      try{
+        const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}},audio:false});
+        video.srcObject=s;
         await video.play().catch(()=>{});
-        statusBox.textContent = 'Status: ✅ Kamera aktiv';
-        startBtn.style.display = 'none';
-      } catch (err) {
-        if (preferRear) {
-          // Fallback ohne exact
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio:false });
-            video.srcObject = stream;
-            video.muted = true;
-            await video.play().catch(()=>{});
-            statusBox.textContent = 'Status: ✅ Kamera aktiv (Fallback)';
-            startBtn.style.display = 'none';
-            return;
-          } catch (e2) {
-            // Letzter Fallback: irgendeine Kamera
-            try {
-              const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio:false });
-              video.srcObject = stream;
-              video.muted = true;
-              await video.play().catch(()=>{});
-              statusBox.textContent = 'Status: ✅ Kamera aktiv (irgendeine)';
-              startBtn.style.display = 'none';
-              return;
-            } catch (e3) {
-              errorBox.innerText = 'Kamera konnte nicht gestartet werden: ' + e3.message + '\nTipp: Browser-Berechtigung prüfen (Schloss-Symbol) und Seite neu laden.';
-              errorBox.style.display = 'block';
-              statusBox.textContent = 'Status: ❌ Fehler';
-            }
-          }
-        } else {
-          errorBox.innerText = 'Kamera-Fehler: ' + err.message;
-          errorBox.style.display = 'block';
-          statusBox.textContent = 'Status: ❌ Fehler';
+      }catch(e1){
+        try{
+          const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+          video.srcObject=s; await video.play().catch(()=>{});
+        }catch(e2){
+          const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+          video.srcObject=s; await video.play().catch(()=>{});
         }
       }
-    }
+    })();
 
-    // Manche Browser brauchen einen Klick (User-Geste).
-    startBtn.addEventListener('click', () => startCamera(true));
-
-    // Automatisch versuchen (falls Browser es erlaubt)
-    startCamera(true);
-
-    // Slider steuert Transparenz
+    // Komfort: Pan / Pinch-Zoom / Rotate
     const overlay = document.getElementById('overlay');
-    document.getElementById('slider').addEventListener('input', e => {
-      overlay.style.opacity = e.target.value / 100;
+    let state = { x:0, y:0, scale:1, rot:0 }; // Translation in px, scale, rotation in deg
+    let activeTouches = new Map();
+
+    function applyTransform(){
+      overlay.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`;
+    }
+    applyTransform();
+
+    function dist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
+    function angle(a,b){ return Math.atan2(b.clientY-a.clientY, b.clientX-a.clientX) * 180/Math.PI; }
+    function center(a,b){ return { x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 }; }
+
+    let start = null; // gesture start
+    const overlayWrap = document.body;
+
+    overlayWrap.addEventListener('touchstart', (e)=>{
+      for(const t of e.changedTouches) activeTouches.set(t.identifier, t);
+      if(activeTouches.size===1){
+        const t = activeTouches.values().next().value;
+        start = { mode:'pan', x:t.clientX, y:t.clientY, baseX:state.x, baseY:state.y };
+      } else if(activeTouches.size>=2){
+        const [t1,t2] = [...activeTouches.values()].slice(0,2);
+        start = { mode:'pinch', baseScale:state.scale, baseRot:state.rot, baseX:state.x, baseY:state.y,
+                  startDist: dist(t1,t2), startAngle: angle(t1,t2), startCenter: center(t1,t2) };
+      }
+    }, {passive:false});
+
+    overlayWrap.addEventListener('touchmove', (e)=>{
+      e.preventDefault();
+      for(const t of e.changedTouches) activeTouches.set(t.identifier, t);
+      if(!start) return;
+      if(start.mode==='pan' && activeTouches.size===1){
+        const t = activeTouches.values().next().value;
+        state.x = start.baseX + (t.clientX - start.x);
+        state.y = start.baseY + (t.clientY - start.y);
+      } else if(start.mode==='pinch' && activeTouches.size>=2){
+        const [t1,t2] = [...activeTouches.values()].slice(0,2);
+        const scaleFactor = dist(t1,t2) / Math.max(1, start.startDist);
+        const rotDelta = angle(t1,t2) - start.startAngle;
+        state.scale = Math.max(0.2, Math.min(5, start.baseScale * scaleFactor));
+        state.rot = start.baseRot + rotDelta;
+        // optional: translate roughly with center movement
+        const c = center(t1,t2);
+        state.x = start.baseX + (c.x - start.startCenter.x);
+        state.y = start.baseY + (c.y - start.startCenter.y);
+      }
+      applyTransform();
+    }, {passive:false});
+
+    overlayWrap.addEventListener('touchend', (e)=>{
+      for(const t of e.changedTouches) activeTouches.delete(t.identifier);
+      if(activeTouches.size===0) start=null;
+    });
+    overlayWrap.addEventListener('touchcancel', (e)=>{
+      for(const t of e.changedTouches) activeTouches.delete(t.identifier);
+      if(activeTouches.size===0) start=null;
+    });
+
+    // Opacity slider
+    document.getElementById('opacity').addEventListener('input', e=>{
+      overlay.style.opacity = e.target.value/100;
+    });
+
+    // Reset
+    document.getElementById('reset').addEventListener('click', ()=>{
+      state = { x:0, y:0, scale:1, rot:0 };
+      applyTransform();
     });
   </script>
 </body>
