@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Früher/Heute Ansicht (GPS + Gesten + Info/Audio)</title>
+  <title>Zeitreise Luzern</title>
   <style>
     body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; font-family: system-ui, sans-serif; }
     #video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
@@ -18,14 +18,35 @@
     #reload { position:absolute; top:10px; right:10px; z-index:12; padding:10px 12px; border-radius:10px; border:none; background:#1976d2; color:#fff; font-weight:700; }
     #infobox { position:absolute; left:10px; right:10px; bottom:90px; background:rgba(0,0,0,.75); color:#fff; padding:12px; border-radius:12px; z-index:20; display:none; }
     #audio-btn { margin-top:8px; padding:8px 12px; border:none; border-radius:8px; background:#1976d2; color:#fff; font-weight:600; }
+    /* Startscreen */
+    #startscreen {
+      position:fixed; inset:0; background:#0b0b0b; color:#fff;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; z-index:999;
+      padding: 24px;
+      background: radial-gradient(ellipse at top, #1a1a1a, #0b0b0b);
+    }
+    #startscreen h1 { margin: 0 0 8px 0; }
+    #startscreen p { opacity:.9; }
+    #startbtn {
+      margin-top:18px; padding:12px 24px; border:none; border-radius:12px;
+      background:#1976d2; color:#fff; font-size:18px; font-weight:700;
+    }
   </style>
 </head>
 <body>
-  <div id="status">⏳ Lade Orte…</div>
-  <button id="reload">Neu prüfen</button>
+  <!-- Startscreen -->
+  <div id="startscreen">
+    <h1>🌍 Zeitreise Luzern</h1>
+    <p>Erlebe Orte im Tribschenquartier, wie sie früher aussahen.<br>Tippe auf Start und erlaube Kamera & Standort.</p>
+    <button id="startbtn">Start</button>
+  </div>
+
+  <div id="status" style="display:none;">⏳ Lade Orte…</div>
+  <button id="reload" style="display:none;">Neu prüfen</button>
   <video id="video" autoplay playsinline webkit-playsinline muted></video>
   <img id="overlay" src="">
-  <div id="ui">
+  <div id="ui" style="display:none;">
     <input type="range" min="0" max="100" value="70" id="opacity">
   </div>
 
@@ -40,6 +61,9 @@
     const overlay = document.getElementById('overlay');
     const statusBox = document.getElementById('status');
     const reloadBtn = document.getElementById('reload');
+    const ui = document.getElementById('ui');
+    const startscreen = document.getElementById('startscreen');
+    const startbtn = document.getElementById('startbtn');
     const infoBox = document.getElementById('infobox');
     const infoTitle = document.getElementById('info-title');
     const infoText = document.getElementById('info-text');
@@ -50,7 +74,7 @@
     function log(msg){ statusBox.textContent += '\n' + msg; }
 
     // Kamera
-    (async function startCam(){
+    async function startCam(){
       try{
         const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}},audio:false});
         video.srcObject=s; await video.play().catch(()=>{});
@@ -63,7 +87,7 @@
           video.srcObject=s; await video.play().catch(()=>{});
         }
       }
-    })();
+    }
 
     // Orte
     let ORTE = [];
@@ -146,20 +170,16 @@
       }, { enableHighAccuracy:true, timeout:10000, maximumAge:0 });
     }
 
-    reloadBtn.addEventListener('click', checkGPS);
-    (async ()=>{ await loadOrte(); await checkGPS(); })();
-
     // Opacity slider
     document.getElementById('opacity').addEventListener('input', e=>{
       overlay.style.opacity = e.target.value/100;
     });
 
-    // --- Gestensteuerung (Pan / Pinch / Rotate) ---
+    // Gestensteuerung
     overlay.style.touchAction = "none";
     let state = { x:0, y:0, scale:1, rot:0 };
     function apply(){ overlay.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`; }
 
-    // Pointer: Drag
     let dragging = false, last = {x:0,y:0};
     overlay.addEventListener('pointerdown', e=>{
       if (e.target.closest('#ui')) return;
@@ -173,7 +193,6 @@
     overlay.addEventListener('pointerup', ()=> dragging=false);
     overlay.addEventListener('pointercancel', ()=> dragging=false);
 
-    // Touch: Pinch/Rotate
     let twoStart = null;
     function tdist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
     function tangle(a,b){ return Math.atan2(b.clientY-a.clientY, b.clientX-a.clientX) * 180/Math.PI; }
@@ -206,6 +225,19 @@
 
     overlay.addEventListener('touchend', ()=>{ twoStart=null; });
     overlay.addEventListener('touchcancel', ()=>{ twoStart=null; });
+
+    // Startbutton
+    startbtn.addEventListener('click', async ()=>{
+      startscreen.style.display = 'none';
+      statusBox.style.display = 'block';
+      reloadBtn.style.display = 'inline-block';
+      ui.style.display = 'grid';
+      await startCam();
+      await loadOrte();
+      await checkGPS();
+    });
+
+    reloadBtn.addEventListener('click', checkGPS);
   </script>
 </body>
 </html>
