@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern v10q – Higher Title Box (24%)</title>
+  <title>Zeitreise Luzern – Vintage UI</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --brand:#caa66d;
+      --brand:#d5b27a;
       --glass: rgba(25,19,15,.58);
       --text:#f6f3ef;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -16,58 +16,72 @@
     html,body{margin:0;height:100%;background:#000;color:var(--text);
       font-family:"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
 
-    #start{position:fixed;inset:0;z-index:999;color:var(--text)}
-    #start::before{
+    /* Startscreen container */
+    .start-screen{position:fixed;inset:0;z-index:999;opacity:0;
+      animation:fadeIn 900ms ease forwards;}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)}}
+
+    /* Background photo */
+    .start-screen::before{
       content:"";position:absolute;inset:0;
       background-image:url("Bilder/zeppelin_tribschen.jpg");
       background-size:cover;background-position:center 35%;
-      filter:sepia(.5) contrast(.9) brightness(.9);
-      opacity:.78;
+      filter:sepia(.45) contrast(.92) brightness(.9);
+      opacity:.86;
     }
-    #start::after{
+    /* Vignette */
+    .start-screen::after{
       content:"";position:absolute;inset:0;
-      background:radial-gradient(120% 85% at 50% 42%, rgba(0,0,0,0) 0%, rgba(0,0,0,.33) 62%, rgba(0,0,0,.52) 100%);
+      background:
+        radial-gradient(110% 85% at 50% 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);
       pointer-events:none;
     }
 
+    /* Title box (unified) */
     .stack{
       position:absolute;left:50%;top:24%;transform:translate(-50%,-50%);
-      width:min(92vw, 620px);
+      width:min(92vw, 720px);
       background:var(--glass);
-      border-radius:18px;
-      outline:1px solid rgba(255,255,255,.05);
-      box-shadow:0 14px 40px rgba(0,0,0,.30);
+      border-radius:20px;
+      outline:1px solid rgba(255,255,255,.06);
+      box-shadow:0 16px 42px rgba(0,0,0,.35);
       text-align:center;
       backdrop-filter:saturate(110%) blur(2px);
-      padding:18px 22px 20px;
+      padding:18px 26px 20px;
     }
     h1{
       font-family:"Playfair Display", serif;
       font-weight:700;letter-spacing:.2px;
-      font-size: clamp(26px, 6vw, 40px);
-      line-height:1.15;margin:0 0 8px;
-      color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25);
+      font-size: clamp(26px, 6.2vw, 44px);
+      line-height:1.12;margin:0 0 10px;
+      color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.28);
     }
-    .subtitle{font-weight:600;letter-spacing:.2px;font-size: clamp(14px, 4vw, 18px);line-height:1.45;margin:0;opacity:.95}
+    .subtitle{
+      font-weight:600;letter-spacing:.2px;
+      font-size: clamp(14px, 4.2vw, 18px);
+      line-height:1.45;margin:0;opacity:.96
+    }
 
+    /* CTA + hint bottom */
     .cta-wrap{
       position:absolute;left:50%;bottom:calc(28px + var(--safe-bottom));
-      transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;
+      transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;
     }
     .cta{
       display:inline-block;font-weight:800;letter-spacing:.3px;
-      font-size: clamp(16px, 4.5vw, 18px);
-      padding:14px 22px;border:0;border-radius:999px;
-      background:linear-gradient(180deg, #e1c088, #c79f5d);
-      color:#1a130e;box-shadow:0 10px 22px rgba(0,0,0,.25);
+      font-size: clamp(16px, 4.6vw, 18px);
+      padding:14px 24px;border:0;border-radius:999px;
+      background:linear-gradient(180deg, #e7c791, #caa66d);
+      color:#1a130e;box-shadow:0 12px 26px rgba(0,0,0,.28);
       transition:transform .08s ease, filter .08s ease;
     }
     .cta:active{transform:translateY(1px); filter:brightness(.95);}
     .hint{font:600 13px/1.5 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;opacity:.92;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+
   </style>
 </head>
 <body>
-  <div id="start">
+  <div class="start-screen">
     <div class="stack">
       <h1>Zeitreise ins Tribschen</h1>
       <p class="subtitle">Wo Luftschiffe landeten und Geschichten begannen.</p>
