@@ -1,18 +1,29 @@
 [
   {
     "name": "Platz 1",
-    "lat": 47.0441387,
-    "lng": 8.3157904,
-    "image": "platz1.jpg",
-    "info": "Am Platz 1 stand früher die alte Fabrik. Hier trifft Vergangenheit die Gegenwart.",
+    "lat": 47.0,
+    "lng": 8.0,
+    "radius": 100,
+    "text": "Beschreibung für Platz 1.",
+    "image": "bilder/platz1.jpg",
     "audio": "audio/platz1.mp3"
   },
   {
-    "name": "Inseli Park",
-    "lat": 47.047,
-    "lng": 8.31,
+    "name": "Platz 2",
+    "lat": 47.0,
+    "lng": 8.0,
+    "radius": 100,
+    "text": "Beschreibung für Platz 2.",
     "image": "bilder/platz2.jpg",
-    "info": "Beliebter Treffpunkt direkt am See. Früher Umschlagplatz für Güter.",
-    "audio": "audio/inselipark.mp3"
+    "audio": "audio/platz2.mp3"
+  },
+  {
+    "name": "Platz 3",
+    "lat": 47.0,
+    "lng": 8.0,
+    "radius": 100,
+    "text": "Beschreibung für Platz 3.",
+    "image": "bilder/platz3.jpg",
+    "audio": "audio/platz3.mp3"
   }
 ]

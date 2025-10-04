@@ -1,161 +1,64 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern v10a</title>
+  <title>Zeitreise Luzern v10c</title>
   <style>
     * { box-sizing: border-box; }
-    html, body { margin:0; height:100%; background:#000; font-family: system-ui, -apple-system, Roboto, Arial, sans-serif; }
-    #video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; background:#000; }
-    #overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:5; display:none; opacity:.6; transform-origin:center center; }
+    html, body { margin:0; height:100%; background:#000; font-family: system-ui, Arial, sans-serif; }
+    #camera { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; background:#000; }
+    #imageOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:5; display:none; opacity:.7; }
     #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px;
           background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.8) 100%); z-index:10; }
     input[type=range] { width:100%; }
-    #status { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.7); padding:8px 10px; border-radius:10px; font-size:13px; z-index:12; white-space:pre-wrap; }
+    #overlay { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.7); padding:8px 10px; border-radius:10px; font-size:13px; z-index:12; white-space:pre-wrap; }
     #infobox { position:absolute; left:10px; right:10px; bottom:90px; background:rgba(0,0,0,.8); color:#fff; padding:12px; border-radius:12px; z-index:20; display:none; }
     #audio-btn { margin-top:8px; padding:8px 12px; border:none; border-radius:8px; background:#1976d2; color:#fff; font-weight:600; }
-    /* Startscreen */
     #startscreen { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#0b0b0b; color:#fff; z-index:999; text-align:center; padding:24px; }
     #startbtn { padding:12px 20px; border:none; border-radius:12px; background:#1976d2; color:#fff; font-size:18px; font-weight:700; }
-    #permhint { opacity:.8; margin-top:10px; font-size:13px; }
+    #manualBar { position:absolute; top:10px; right:10px; z-index:15; display:flex; gap:8px; align-items:center; }
+    #placeSelect, #backToGPS { padding:8px 10px; border-radius:8px; border:none; font-weight:600; }
+    #placeSelect { background:#ffffff; }
+    #backToGPS { background:#1976d2; color:#fff; display:none; }
   </style>
 </head>
 <body>
-  <!-- Startscreen -->
   <div id="startscreen">
     <div>
       <h2>🌍 Zeitreise Luzern</h2>
       <p>Tippe auf Start und erlaube Kamera & Standort.</p>
       <button id="startbtn">Start</button>
-      <div id="permhint">Falls keine Abfrage erscheint: Schloss-Symbol → Kamera/Standort „Zulassen“ → Seite neu laden.</div>
     </div>
   </div>
-
-  <div id="status" style="display:none;">⏳ Initialisiere…</div>
-
-  <!-- v8-like camera setup -->
-  <video id="video" autoplay playsinline webkit-playsinline muted></video>
-  <img id="overlay" src="">
-
-  <div id="ui" style="display:none;">
-    <input type="range" min="0" max="100" value="60" id="opacity">
+  <div id="overlay" style="display:none;">⏳ Initialisiere…</div>
+  <div id="manualBar" style="display:none;">
+    <select id="placeSelect">
+      <option value="">Ort manuell wählen…</option>
+    </select>
+    <button id="backToGPS">GPS</button>
   </div>
-
+  <video id="camera" autoplay playsinline webkit-playsinline muted></video>
+  <img id="imageOverlay" alt="Historisches Overlay">
   <div id="infobox">
     <div id="info-title" style="font-weight:700;margin-bottom:6px;"></div>
     <div id="info-text" style="font-size:14px;opacity:.95;"></div>
     <button id="audio-btn">▶️ Audio abspielen</button>
     <audio id="audio-player"></audio>
   </div>
-
+  <div id="ui" style="display:none;">
+    <input id="opacity" type="range" min="0" max="100" value="70">
+  </div>
   <script>
-    const video = document.getElementById('video');
-    const overlay = document.getElementById('overlay');
-    const statusBox = document.getElementById('status');
-    const startscreen = document.getElementById('startscreen');
-    const startbtn = document.getElementById('startbtn');
-    const ui = document.getElementById('ui');
-    const infobox = document.getElementById('infobox');
-    const infoTitle = document.getElementById('info-title');
-    const infoText = document.getElementById('info-text');
-    const audioBtn = document.getElementById('audio-btn');
-    const audioPlayer = document.getElementById('audio-player');
-    const RADIUS_KM = 0.5;
-    let ORTE = [];
-
-    function log(msg){ statusBox.style.display='block'; statusBox.textContent += '\n' + msg; }
-
-    // ==== v8 CAMERA LOGIC (unchanged, just called after Start) ====
-    async function startCam(){
-      try{
-        const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}},audio:false});
-        video.srcObject=s; await video.play().catch(()=>{}); log('🎥 Kamera OK (environment exact)'); return true;
-      }catch(e1){
-        try{
-          const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-          video.srcObject=s; await video.play().catch(()=>{}); log('🎥 Kamera OK (environment)'); return true;
-        }catch(e2){
-          try{
-            const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-            video.srcObject=s; await video.play().catch(()=>{}); log('🎥 Kamera OK (fallback video:true)'); return true;
-          }catch(e3){
-            log('❌ Kamera-Fehler: ' + e3.name + ' – ' + e3.message); return false;
-          }
-        }
-      }
-    }
-
-    async function loadOrte(){
-      try{
-        const r = await fetch('orte.json?v=' + Date.now());
-        ORTE = await r.json();
-        log('✅ Orte geladen: ' + ORTE.length);
-      }catch(err){ log('❌ Orte-Fehler: ' + err.message); }
-    }
-
-    function distKm(lat1,lng1,lat2,lng2){
-      const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lng2-lng1)*Math.PI/180;
-      const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    }
-    function findNearest(lat,lng){
-      let best=null, bestDist=Infinity;
-      for(const o of ORTE){
-        const d=distKm(lat,lng,o.lat,o.lng);
-        if(d<bestDist){ bestDist=d; best=o; }
-      }
-      return {best, distanceKm: bestDist};
-    }
-
-    function showImage(src){
-      overlay.onload = ()=>{ log('🖼️ Bild geladen: '+src); overlay.style.display='block'; };
-      overlay.onerror = ()=>{ log('❌ Bildfehler: '+src); };
-      overlay.src = src + (src.includes('?')?'&':'?') + 'v=' + Date.now();
-    }
-
-    function showInfo(ort){
-      if(!ort){ infobox.style.display='none'; return; }
-      infoTitle.textContent = ort.name || '';
-      infoText.textContent = ort.info || '';
-      if(ort.audio){
-        audioPlayer.src = ort.audio + (ort.audio.includes('?')?'&':'?') + 'v=' + Date.now();
-        audioBtn.style.display = 'inline-block';
-        audioBtn.textContent = '▶️ Audio abspielen';
-        audioBtn.onclick = () => {
-          if(audioPlayer.paused){ audioPlayer.play(); audioBtn.textContent = '⏸️ Audio pausieren'; }
-          else { audioPlayer.pause(); audioBtn.textContent = '▶️ Audio abspielen'; }
-        };
-      } else { audioBtn.style.display = 'none'; }
-      infobox.style.display = (ort.info || ort.audio) ? 'block' : 'none';
-    }
-
-    async function checkGPS(){
-      if(!navigator.geolocation){ log('❌ Kein Geolocation'); return; }
-      statusBox.textContent = '⏳ Standort wird ermittelt…';
-      navigator.geolocation.getCurrentPosition(pos=>{
-        const {latitude,longitude}=pos.coords;
-        log('📍 ' + latitude.toFixed(5) + ', ' + longitude.toFixed(5));
-        const {best, distanceKm} = findNearest(latitude,longitude);
-        if(best){
-          log('➡️ Nächster Ort: ' + best.name + ' (' + distanceKm.toFixed(2) + ' km)');
-          if(distanceKm < RADIUS_KM){ showImage(best.image); showInfo(best); }
-          else { overlay.style.display='none'; showInfo(null); }
-        }
-      }, err=>{ log('❌ Standort: ' + err.message); }, {enableHighAccuracy:true, timeout:10000, maximumAge:0});
-    }
-
-    document.getElementById('opacity').addEventListener('input', e=> overlay.style.opacity = e.target.value/100);
-
-    // Start: Only hide screen and call v8 functions
-    startbtn.addEventListener('click', async ()=>{
-      startscreen.style.display = 'none';
-      statusBox.style.display = 'block';
-      ui.style.display = 'grid';
-      await startCam();   // <- v8 camera
-      await loadOrte();
-      await checkGPS();
-    });
+    const camera=document.getElementById("camera"), imageOverlay=document.getElementById("imageOverlay"), overlay=document.getElementById("overlay"), infobox=document.getElementById("infobox"), infoTitle=document.getElementById("info-title"), infoText=document.getElementById("info-text"), audioBtn=document.getElementById("audio-btn"), audioPlayer=document.getElementById("audio-player"), opacitySlider=document.getElementById("opacity"), startscreen=document.getElementById("startscreen"), startbtn=document.getElementById("startbtn"), placeSelect=document.getElementById("placeSelect"), backToGPS=document.getElementById("backToGPS"), manualBar=document.getElementById("manualBar");
+    let places=[], manualMode=false;
+    async function startCamera(){try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});camera.srcObject=s;await camera.play();}catch(e){overlay.textContent="❌ Kamera: "+e.message;}}
+    async function loadPlaces(){const res=await fetch("orte.json?v="+Date.now());places=await res.json();placeSelect.innerHTML='<option value="">Ort manuell wählen…</option>';places.forEach((p,i)=>{const opt=document.createElement("option");opt.value=i;opt.textContent=p.name;placeSelect.appendChild(opt);});}
+    function showPlace(p){imageOverlay.src=p.image;imageOverlay.style.display="block";infoTitle.textContent=p.name;infoText.textContent=p.text;audioBtn.onclick=()=>{new Audio(p.audio).play();};infobox.style.display="block";}
+    startbtn.addEventListener("click",async()=>{startscreen.style.display="none";overlay.style.display="block";manualBar.style.display="flex";document.getElementById("ui").style.display="grid";await startCamera();await loadPlaces();});
+    placeSelect.addEventListener("change",()=>{const idx=parseInt(placeSelect.value,10);if(!isNaN(idx)){manualMode=true;showPlace(places[idx]);overlay.textContent="📍 Manuell: "+places[idx].name;backToGPS.style.display="inline-block";}});
+    backToGPS.addEventListener("click",()=>{manualMode=false;backToGPS.style.display="none";overlay.textContent="↩️ Zurück zu GPS";});
+    opacitySlider.addEventListener("input",()=>{imageOverlay.style.opacity=opacitySlider.value/100;});
   </script>
 </body>
 </html>
