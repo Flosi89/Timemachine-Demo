@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern v10l – Vintage Start optimiert</title>
+  <title>Zeitreise Luzern v10m – Split Start</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root{
       --brand:#caa66d;
-      --panelTop: rgba(25,19,15,.55);
-      --panelBottom: rgba(25,19,15,.80);
+      --glass: rgba(25,19,15,.58);
+      --glass2: rgba(25,19,15,.46);
       --text:#f6f3ef;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+    html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
 
     /* Streams */
     #camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:0;display:none;}
@@ -43,61 +43,72 @@
     #mapWrap{position:absolute;inset:0;display:none;z-index:18}
     #map{position:absolute;inset:0}
 
-    /* Start – Vintage, Luftschiff sichtbar */
+    /* Start – Split Layout */
     #start{position:fixed;inset:0;z-index:999;color:var(--text)}
     #start::before{
       content:"";position:absolute;inset:0;
-      background-image:url("Bilder/zeppelin_tribschen.jpg"); /* Pfad ggf. anpassen */
-      background-size:cover;background-position:center 38%;
+      background-image:url("Bilder/zeppelin_tribschen.jpg");
+      background-size:cover;background-position:center 35%;
       filter:sepia(.5) contrast(.9) brightness(.9);
-      opacity:.75;
+      opacity:.78;
     }
     #start::after{
       content:"";position:absolute;inset:0;
-      background:radial-gradient(120% 85% at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.35) 62%, rgba(0,0,0,.55) 100%);
+      background:radial-gradient(120% 85% at 50% 42%, rgba(0,0,0,0) 0%, rgba(0,0,0,.33) 62%, rgba(0,0,0,.52) 100%);
       pointer-events:none;
     }
-    #start .panel{
-      position:absolute;left:50%;top:74%;transform:translate(-50%,-50%);
-      width:min(92vw, 560px);
-      padding:20px 22px 18px;
-      background:linear-gradient(180deg, var(--panelTop), var(--panelBottom));
-      border-radius:20px;
+
+    .stack{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:min(92vw, 620px);display:flex;flex-direction:column;gap:10px;align-items:center}
+    .card{
+      width:100%;
+      padding:14px 18px;
+      background:var(--glass);
+      border-radius:16px;
       outline:1px solid rgba(255,255,255,.05);
-      box-shadow:0 16px 50px rgba(0,0,0,.35);
-      text-align:center;backdrop-filter:saturate(110%) blur(2px);
+      box-shadow:0 14px 40px rgba(0,0,0,.30);
+      text-align:center;
+      backdrop-filter:saturate(110%) blur(2px);
     }
-    #start h1{
+    .card.sub{background:var(--glass2);padding:12px 16px}
+
+    h1{
       font-family:"Playfair Display", serif;
       font-weight:700;letter-spacing:.2px;
-      font-size: clamp(28px, 6vw, 42px);
-      line-height:1.15;margin:0 0 8px;
-      color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25);
+      font-size: clamp(26px, 6vw, 40px);
+      line-height:1.15;margin:0;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25);
     }
-    #start .subtitle{
-      font-weight:600;letter-spacing:.2px;
-      font-size: clamp(14px, 4vw, 18px);
-      line-height:1.5;margin:0 0 16px;opacity:.95;
+    .subtitle{font-weight:600;letter-spacing:.2px;font-size: clamp(14px, 4vw, 18px);line-height:1.45;margin:0;opacity:.95}
+
+    /* Floating CTA bottom */
+    .cta-wrap{
+      position:absolute;left:50%;bottom:calc(28px + var(--safe-bottom));
+      transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;
     }
-    #start .cta{
-      display:inline-block;
-      font-weight:800;letter-spacing:.3px;
+    .cta{
+      display:inline-block;font-weight:800;letter-spacing:.3px;
       font-size: clamp(16px, 4.5vw, 18px);
       padding:14px 22px;border:0;border-radius:999px;
       background:linear-gradient(180deg, #e1c088, #c79f5d);
       color:#1a130e;box-shadow:0 10px 22px rgba(0,0,0,.25);
       transition:transform .08s ease, filter .08s ease;
     }
-    #start .cta:active{transform:translateY(1px); filter:brightness(.95);}
-    #start .hint{margin-top:12px;font:600 13px/1.5 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;opacity:.92}
+    .cta:active{transform:translateY(1px); filter:brightness(.95);}
+    .hint{font:600 13px/1.5 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;opacity:.92;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+
   </style>
 </head>
 <body>
-  <!-- Startscreen -->
+  <!-- Startscreen (Split) -->
   <div id="start">
-    <div class="panel">
-      <h1>Zeitreise ins<br>Tribschen</h1>
-      <p class="subtitle">Wo Luftschiffe landeten und Geschichten begannen.</p>
+    <div class="stack">
+      <div class="card">
+        <h1>Zeitreise ins Tribschen</h1>
+      </div>
+      <div class="card sub">
+        <p class="subtitle">Wo Luftschiffe landeten und Geschichten begannen.</p>
+      </div>
+    </div>
+    <div class="cta-wrap">
       <button id="startbtn" class="cta">Zeitreise starten</button>
       <div class="hint">Hinweis: Bitte Kamera- und Standort‑Zugriff erlauben, wenn du gefragt wirst.</div>
     </div>
