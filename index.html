@@ -3,9 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern – Vintage UI (funktionierend)</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <title>Zeitreise Tribschen</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- UI -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     :root{
       --brand:#d5b27a;
@@ -17,7 +26,7 @@
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Inter", system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif;}
 
-    /* --- App UI (wie zuvor) --- */
+    /* App UI */
     #camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:0;display:none;}
     #imageOverlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;opacity:.7;transform-origin:center center;z-index:5}
     #top{position:absolute;left:0;right:0;top:0;padding:calc(8px + var(--safe-top)) 10px 10px;display:none;justify-content:space-between;gap:10px;z-index:20;pointer-events:none;}
@@ -34,7 +43,7 @@
     #mapWrap{position:absolute;inset:0;display:none;z-index:18}
     #map{position:absolute;inset:0}
 
-    /* --- Startscreen (Vintage, gemeinsame Box oben, Button unten) --- */
+    /* Startscreen */
     .start-screen{position:fixed;inset:0;z-index:999;opacity:0;animation:fadeIn 900ms ease forwards;}
     @keyframes fadeIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)}}
     .start-screen::before{
@@ -72,12 +81,12 @@
   <!-- Startscreen -->
   <div class="start-screen" id="start">
     <div class="stack">
-      <h1>Zeitreise ins Tribschen</h1>
+      <h1>Zeitreise Tribschen</h1>
       <p class="subtitle">Wo Luftschiffe landeten und Geschichten begannen.</p>
     </div>
     <div class="cta-wrap">
       <button id="startbtn" class="cta">Zeitreise starten</button>
-      <div class="hint">Hinweis: Bitte Kamera- und Standort-Zugriff erlauben, wenn du gefragt wirst.</div>
+      <div class="hint">Hinweis: Bitte Kamera- und Standort‑Zugriff erlauben, wenn du gefragt wirst.</div>
     </div>
   </div>
 
@@ -112,7 +121,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // ====== FUNKTIONIERENDER STARTFLOW WIE VORHER ======
+    // ====== FUNKTIONIERENDER STARTFLOW ======
     const startOverlay = document.getElementById('start');
     const startbtn = document.getElementById('startbtn');
     const topBar = document.getElementById('top');
@@ -153,7 +162,6 @@
         places=[{name:'Platz 1',lat:47.0495,lng:8.31,radius:120,text:'Fallback 1',image:'Bilder/platz1.jpg'}];
         console.warn('orte.json:', e.message, '→ Fallback verwendet');
       }
-      // Dropdown füllen
       placeSelect.innerHTML='<option value="">Ort wählen…</option>';
       places.forEach((p,i)=>{
         const opt=document.createElement('option');
@@ -207,6 +215,16 @@
       }, err=> console.warn('GPS:', err.message), {enableHighAccuracy:true});
     }
 
+    opacity.addEventListener('input', ()=> imageOverlay.style.opacity = opacity.value/100 );
+
+    imageOverlay.style.touchAction='none';
+    let drag=false,last={x:0,y:0}, st={x:0,y:0,scale:1,rot:0};
+    function apply(){ imageOverlay.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale}) rotate(${st.rot}deg)`; }
+    imageOverlay.addEventListener('pointerdown', e=>{ if(e.target.closest('#footer')) return; drag=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); });
+    imageOverlay.addEventListener('pointermove', e=>{ if(!drag) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; st.x+=dx; st.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); });
+    imageOverlay.addEventListener('pointerup', ()=> drag=false);
+    imageOverlay.addEventListener('pointercancel', ()=> drag=false);
+
     function initMap(){
       if(map){ setTimeout(()=>map.invalidateSize(),0); return; }
       map = L.map('map', { zoomControl:true });
@@ -244,27 +262,29 @@
       document.getElementById('toggleMap').textContent = mapVisible ? '📷 Kamera' : '🗺️ Karte';
       if(mapVisible){ setTimeout(()=>{ initMap(); map.invalidateSize(); }, 0); }
     }
-    toggleMapBtn.addEventListener('click', ()=> toggleMap());
-    placeSelect.addEventListener('change', ()=>{
+    document.getElementById('toggleMap').addEventListener('click', ()=> toggleMap());
+
+    document.getElementById('placeSelect').addEventListener('change', ()=>{
       const i = placeSelect.value ? parseInt(placeSelect.value,10) : NaN;
       if(!isNaN(i) && places[i]){ manual = true; showPlace(places[i]); }
     });
-    gpsBtn.addEventListener('click', ()=>{ manual=false; });
-    opacity.addEventListener('input', ()=> imageOverlay.style.opacity = opacity.value/100 );
+    document.getElementById('gpsBtn').addEventListener('click', ()=>{ manual=false; });
 
-    // ====== START-BUTTON: BEHÄLT DEN ALTEN FLOW ======
-    startbtn.addEventListener('click', async ()=>{
-      // Startscreen weg & UI sichtbar machen
+    // Startbutton wie vorher
+    document.getElementById('startbtn').addEventListener('click', async ()=>{
       document.getElementById('start')?.remove();
       camera.style.display='block';
-      topBar.style.display='flex';
-      footer.style.display='block';
-
-      // Kamera/GPS/Orte wie zuvor starten
+      document.getElementById('top').style.display='flex';
+      document.getElementById('footer').style.display='block';
       await startCamera();
       await loadPlaces();
       setupGPS();
     });
+
+    // PWA: Service Worker registrieren
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(console.error);
+    }
   </script>
 </body>
 </html>
