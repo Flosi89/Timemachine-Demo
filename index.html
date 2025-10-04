@@ -1,127 +1,280 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Zeitreise AR</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <title>Zeitreise Luzern v10h (UI clean)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    body,html {margin:0;padding:0;height:100%;background:black;color:white;font-family:sans-serif;}
-    #videoBG {position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:-1;}
-    #topbar {position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;}
-    #topbar select,#topbar button {padding:6px 10px;font-size:14px;border-radius:6px;border:none;}
-    #info {position:absolute;bottom:60px;left:10px;right:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;}
-    #slider {position:absolute;bottom:10px;left:10px;right:10px;}
-    #map {position:fixed;top:0;left:0;width:100%;height:100%;display:none;z-index:20;}
+    :root{
+      --brand:#1976d2;
+      --panel:rgba(0,0,0,.80);
+      --toast:rgba(16,16,16,.8);
+      --text:#fff;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:#000;font-family:system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--text);}
+    /* Streams */
+    #camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:0}
+    #imageOverlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;opacity:.7;transform-origin:center center;z-index:5}
+    /* Top layout: left controls, right actions */
+    #top{position:absolute;left:0;right:0;top:0;padding:calc(8px + var(--safe-top)) 10px 10px;display:flex;justify-content:space-between;gap:10px;z-index:20;pointer-events:none;}
+    #left,#right{display:flex;gap:8px;pointer-events:auto;}
+    #placeSelect{min-width:52vw;max-width:72vw;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:#fff;color:#111;padding:0 10px;font-weight:600}
+    .btn{height:40px;padding:0 12px;border:none;border-radius:10px;font-weight:800;color:#fff;background:#3c3d40}
+    .btn.primary{background:var(--brand)}
+    /* Bottom panel */
+    #infobox{position:absolute;left:10px;right:10px;bottom:calc(70px + var(--safe-bottom));background:var(--panel);padding:14px;border-radius:14px;z-index:15;display:none}
+    #title{font-size:18px;font-weight:900;margin:0 0 6px 0}
+    #desc{font-size:15px;opacity:.95;margin:0}
+    #audio-btn{margin-top:10px;padding:10px 14px;border:none;border-radius:10px;background:var(--brand);color:#fff;font-weight:800}
+    /* Footer slider */
+    #footer{position:absolute;left:0;right:0;bottom:0;padding:0 14px calc(10px + var(--safe-bottom));z-index:14}
+    #opacity{width:100%}
+    /* Map */
+    #mapWrap{position:absolute;inset:0;display:none;z-index:18}
+    #map{position:absolute;inset:0}
+    /* Start */
+    #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0b0b;z-index:999;text-align:center;padding:24px}
+    #start button{padding:12px 20px;border:none;border-radius:12px;background:var(--brand);color:#fff;font-size:18px;font-weight:900}
+    /* Toast */
+    #toast{position:absolute;left:10px;bottom:calc(110px + var(--safe-bottom));max-width:80vw;background:var(--toast);padding:10px 12px;border-radius:10px;font-size:13px;z-index:25;display:none;white-space:pre-wrap}
   </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
-  <video id="videoBG" autoplay muted playsinline></video>
-  <div id="topbar">
-    <select id="placeSelect"><option>Ort wählen…</option></select>
-    <button id="gpsBtn">📍 GPS</button>
-    <button id="mapBtn">🗺️ Karte</button>
+  <div id="start">
+    <div>
+      <h2 style="margin:0 0 6px 0">🌍 Zeitreise Luzern</h2>
+      <p style="opacity:.9;margin:0 0 12px 0">Tippe auf Start und erlaube Kamera & Standort.</p>
+      <button id="startbtn">Start</button>
+      <div style="opacity:.7;margin-top:10px;font-size:12px">Tipp: Im Schloss-Symbol Kamera/Standort zulassen.</div>
+    </div>
   </div>
-  <div id="info">
-    <h3 id="placeName">Willkommen</h3>
-    <p id="placeText">Wähle einen Ort aus oder aktiviere GPS.</p>
-    <button id="audioBtn">🔊 Audio abspielen</button>
+
+  <!-- Top -->
+  <div id="top" style="display:none;">
+    <div id="left">
+      <select id="placeSelect"><option value="">Ort wählen…</option></select>
+    </div>
+    <div id="right">
+      <button id="gpsBtn" class="btn primary" title="GPS-Automatik">📍 GPS</button>
+      <button id="toggleMap" class="btn" title="Karte / Kamera">🗺️ Karte</button>
+    </div>
   </div>
-  <input type="range" id="slider" min="0" max="100" value="50" />
-  <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-let video=document.getElementById('videoBG');
-let placeSelect=document.getElementById('placeSelect');
-let placeName=document.getElementById('placeName');
-let placeText=document.getElementById('placeText');
-let audioBtn=document.getElementById('audioBtn');
-let gpsBtn=document.getElementById('gpsBtn');
-let mapBtn=document.getElementById('mapBtn');
-let slider=document.getElementById('slider');
-let map;
-let places=[];
-let currentAudio;
+  <!-- Streams -->
+  <video id="camera" autoplay playsinline webkit-playsinline muted></video>
+  <img id="imageOverlay" alt="Overlay">
 
-function log(msg){console.log(msg);}
+  <!-- Map -->
+  <div id="mapWrap"><div id="map"></div></div>
 
-async function loadPlaces(){
-  try{
-    const res=await fetch('orte.json?v='+Date.now());
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    places=await res.json();
-    if(!Array.isArray(places)||places.length===0){
-      throw new Error('Leere oder ungültige Liste');
+  <!-- Info bottom -->
+  <div id="infobox">
+    <h3 id="title"></h3>
+    <p id="desc"></p>
+    <button id="audio-btn">▶️ Audio abspielen</button>
+    <audio id="audio"></audio>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer" style="display:none;">
+    <input id="opacity" type="range" min="0" max="100" value="70">
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // DOM
+    const startScreen = document.getElementById('start');
+    const startbtn = document.getElementById('startbtn');
+    const topBar = document.getElementById('top');
+    const placeSelect = document.getElementById('placeSelect');
+    const gpsBtn = document.getElementById('gpsBtn');
+    const toggleMapBtn = document.getElementById('toggleMap');
+    const camera = document.getElementById('camera');
+    const imageOverlay = document.getElementById('imageOverlay');
+    const infobox = document.getElementById('infobox');
+    const titleEl = document.getElementById('title');
+    const descEl = document.getElementById('desc');
+    const audioBtn = document.getElementById('audio-btn');
+    const audioPlayer = document.getElementById('audio');
+    const footer = document.getElementById('footer');
+    const opacity = document.getElementById('opacity');
+    const mapWrap = document.getElementById('mapWrap');
+    const toast = document.getElementById('toast');
+
+    // State
+    let places = [];
+    let manual = false;
+    let map=null, mapVisible=false;
+
+    function showToast(msg){
+      toast.style.display='block';
+      toast.textContent=msg;
+      clearTimeout(showToast._t);
+      showToast._t=setTimeout(()=>toast.style.display='none', 3500);
     }
-  }catch(e){
-    places=[
-      {name:'Platz 1',lat:47.0495,lng:8.3100,radius:120,text:'Fallback 1',image:'bilder/platz1.jpg'},
-      {name:'Platz 2',lat:47.0450,lng:8.3130,radius:120,text:'Fallback 2',image:'bilder/platz2.jpg'}
-    ];
-    log('❌ orte.json: '+e.message+' — Fallback geladen');
-  }
 
-  placeSelect.innerHTML='<option value="">Ort wählen…</option>';
-  places.forEach((p,i)=>{
-    let opt=document.createElement('option');
-    opt.value=i; opt.textContent=p.name||('Ort '+(i+1));
-    placeSelect.appendChild(opt);
-  });
+    async function startCamera(){
+      try{
+        const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}},audio:false});
+        camera.srcObject=s; await camera.play().catch(()=>{}); showToast('🎥 Kamera aktiv');
+      }catch{
+        try{
+          const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+          camera.srcObject=s; await camera.play().catch(()=>{}); showToast('🎥 Kamera aktiv (Fallback)');
+        }catch(e){ showToast('❌ Kamera: '+e.message); }
+      }
+    }
 
-  initMap();
-}
+    async function loadPlaces(){
+      try{
+        const res=await fetch('orte.json?v='+Date.now());
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        places=await res.json();
+        if(!Array.isArray(places) || places.length===0) throw new Error('Leere Liste');
+      }catch(e){
+        places=[
+          {name:'Platz 1',lat:47.0495,lng:8.31,radius:120,text:'Fallback 1',image:'bilder/platz1.jpg'},
+          {name:'Platz 2',lat:47.045,lng:8.313,radius:120,text:'Fallback 2',image:'bilder/platz2.jpg'}
+        ];
+        showToast('❌ orte.json: '+e.message+' — Fallback geladen');
+      }
+      // Dropdown füllen
+      placeSelect.innerHTML='<option value="">Ort wählen…</option>';
+      places.forEach((p,i)=>{
+        const opt=document.createElement('option');
+        opt.value=String(i); opt.textContent=p.name||('Ort '+(i+1));
+        placeSelect.appendChild(opt);
+      });
+      initMap();
+    }
 
-function initMap(){
-  if(!map){
-    map=L.map('map').setView([47.0495,8.31],14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution:'&copy; OpenStreetMap'
-    }).addTo(map);
-  }
-  places.forEach((p,i)=>{
-    L.marker([p.lat,p.lng]).addTo(map).bindPopup(p.name);
-  });
-}
+    // Distanz
+    function distKm(lat1,lng1,lat2,lng2){
+      const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lng2-lng1)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
 
-placeSelect.addEventListener('change',()=>{
-  let idx=placeSelect.value;
-  if(idx==='') return;
-  let p=places[idx];
-  placeName.textContent=p.name;
-  placeText.textContent=p.text;
-});
+    function showPlace(p){
+      if(!p) return;
+      imageOverlay.onload=()=> imageOverlay.style.display='block';
+      imageOverlay.onerror=()=> showToast('❌ Bild: '+p.image);
+      imageOverlay.src=p.image+(p.image.includes('?')?'&':'?')+'v='+Date.now();
+      titleEl.textContent=p.name||'';
+      descEl.textContent=p.text||'';
+      if(p.audio){
+        audioPlayer.src = p.audio+(p.audio.includes('?')?'&':'?')+'v='+Date.now();
+        audioBtn.style.display='inline-block';
+        audioBtn.textContent='▶️ Audio abspielen';
+        audioBtn.onclick=()=>{
+          if(audioPlayer.paused){ audioPlayer.play(); audioBtn.textContent='⏸️ Pause'; }
+          else { audioPlayer.pause(); audioBtn.textContent='▶️ Audio abspielen'; }
+        };
+      }else{
+        audioBtn.style.display='none';
+      }
+      infobox.style.display=(p.text||p.audio)?'block':'none';
+    }
 
-gpsBtn.addEventListener('click',()=>{
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      let lat=pos.coords.latitude;
-      let lng=pos.coords.longitude;
-      log('GPS '+lat+','+lng);
+    function setupGPS(){
+      if(!navigator.geolocation){ showToast('❌ Kein GPS'); return; }
+      navigator.geolocation.watchPosition(pos=>{
+        if(manual) return;
+        const {latitude:lat, longitude:lng} = pos.coords;
+        let best=null, bestKm=1e9;
+        for(const p of places){
+          const d=distKm(lat,lng,p.lat,p.lng);
+          if(d<bestKm){ bestKm=d; best=p; }
+        }
+        if(best){
+          const rKm=((best.radius ?? best.radius_m ?? 100)/1000);
+          if(bestKm<=rKm) showPlace(best);
+        }
+      }, err=> showToast('❌ GPS: '+err.message), {enableHighAccuracy:true});
+    }
+
+    // Slider
+    opacity.addEventListener('input', ()=> imageOverlay.style.opacity = opacity.value/100 );
+
+    // Panning
+    imageOverlay.style.touchAction='none';
+    let drag=false,last={x:0,y:0}, st={x:0,y:0,scale:1,rot:0};
+    function apply(){ imageOverlay.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale}) rotate(${st.rot}deg)`; }
+    imageOverlay.addEventListener('pointerdown', e=>{ if(e.target.closest('#footer')) return; drag=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); });
+    imageOverlay.addEventListener('pointermove', e=>{ if(!drag) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; st.x+=dx; st.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); });
+    imageOverlay.addEventListener('pointerup', ()=> drag=false);
+    imageOverlay.addEventListener('pointercancel', ()=> drag=false);
+
+    // Map
+    function initMap(){
+      if(map){ setTimeout(()=>map.invalidateSize(),0); return; }
+      map = L.map('map', { zoomControl:true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap-Mitwirkende'
+      }).on('tileerror', ()=> showToast('❌ Kacheln blockiert')).addTo(map);
+      map.setView([47.049,8.305],13);
+      const bounds=[];
+      places.forEach((p,i)=>{
+        if(typeof p.lat!=='number'||typeof p.lng!=='number') return;
+        const m=L.marker([p.lat,p.lng]).addTo(map);
+        m.bindPopup(`<b>${p.name||('Ort '+(i+1))}</b><br><button id="goto_${i}">Ort anzeigen</button>`);
+        m.on('click',()=>{
+          m.openPopup();
+          setTimeout(()=>{
+            const btn=document.getElementById('goto_'+i);
+            if(btn){ btn.addEventListener('click',()=>{
+              placeSelect.value=String(i);
+              placeSelect.dispatchEvent(new Event('change'));
+              toggleMap(false);
+            });}
+          },50);
+        });
+        bounds.push([p.lat,p.lng]);
+      });
+      if(bounds.length) map.fitBounds(bounds,{padding:[40,40]});
+    }
+
+    function toggleMap(force){
+      mapVisible = (typeof force==='boolean') ? force : !mapVisible;
+      mapWrap.style.display = mapVisible ? 'block' : 'none';
+      camera.style.display = mapVisible ? 'none' : 'block';
+      imageOverlay.style.display = mapVisible ? 'none' : imageOverlay.style.display;
+      infobox.style.display = mapVisible ? 'none' : infobox.style.display;
+      toggleMapBtn.textContent = mapVisible ? '📷 Kamera' : '🗺️ Karte';
+      if(mapVisible){ setTimeout(()=>{ initMap(); map.invalidateSize(); }, 0); }
+    }
+    toggleMapBtn.addEventListener('click', ()=> toggleMap());
+
+    // Events
+    placeSelect.addEventListener('change', ()=>{
+      const i = placeSelect.value ? parseInt(placeSelect.value,10) : NaN;
+      if(!isNaN(i) && places[i]){
+        manual = true;
+        showPlace(places[i]);
+        showToast('📍 Manuell: '+(places[i].name||('Ort '+(i+1))));
+      }
     });
-  }
-});
+    gpsBtn.addEventListener('click', ()=>{
+      manual=false;
+      showToast('📡 GPS aktiviert');
+    });
 
-mapBtn.addEventListener('click',()=>{
-  let el=document.getElementById('map');
-  el.style.display=(el.style.display==='none'||el.style.display==='')?'block':'none';
-});
-
-audioBtn.addEventListener('click',()=>{
-  if(currentAudio){currentAudio.pause();}
-  let idx=placeSelect.value;
-  if(idx==='') return;
-  let p=places[idx];
-  if(p.audio){
-    currentAudio=new Audio(p.audio);
-    currentAudio.play();
-  }
-});
-
-navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
-.then(stream=>{video.srcObject=stream;})
-.catch(err=>{log('Kamera-Fehler: '+err);});
-
-loadPlaces();
-</script>
+    // Start
+    startbtn.addEventListener('click', async ()=>{
+      startScreen.style.display='none';
+      topBar.style.display='flex';
+      footer.style.display='block';
+      await startCamera();
+      await loadPlaces();
+      setupGPS();
+    });
+  </script>
 </body>
 </html>
