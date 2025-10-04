@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern v10p – Higher Title Box (26%)</title>
+  <title>Zeitreise Luzern v10q – Higher Title Box (24%)</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -16,7 +16,6 @@
     html,body{margin:0;height:100%;background:#000;color:var(--text);
       font-family:"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
 
-    /* Startscreen background */
     #start{position:fixed;inset:0;z-index:999;color:var(--text)}
     #start::before{
       content:"";position:absolute;inset:0;
@@ -31,9 +30,8 @@
       pointer-events:none;
     }
 
-    /* Unified title box higher */
     .stack{
-      position:absolute;left:50%;top:26%;transform:translate(-50%,-50%);
+      position:absolute;left:50%;top:24%;transform:translate(-50%,-50%);
       width:min(92vw, 620px);
       background:var(--glass);
       border-radius:18px;
@@ -52,7 +50,6 @@
     }
     .subtitle{font-weight:600;letter-spacing:.2px;font-size: clamp(14px, 4vw, 18px);line-height:1.45;margin:0;opacity:.95}
 
-    /* Floating CTA bottom */
     .cta-wrap{
       position:absolute;left:50%;bottom:calc(28px + var(--safe-bottom));
       transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;
@@ -70,7 +67,6 @@
   </style>
 </head>
 <body>
-  <!-- Startscreen unified -->
   <div id="start">
     <div class="stack">
       <h1>Zeitreise ins Tribschen</h1>
