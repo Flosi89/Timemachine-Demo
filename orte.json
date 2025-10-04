@@ -1,17 +1,17 @@
 [
   {
     "name": "Platz 1",
-    "lat": 47.0,
-    "lng": 8.0,
-    "radius": 100,
+    "lat": 47.0495,
+    "lng": 8.31,
+    "radius": 120,
     "text": "Beschreibung für Platz 1.",
     "image": "bilder/platz1.jpg",
     "audio": "audio/platz1.mp3"
   },
   {
     "name": "Platz 2",
-    "lat": 47.001,
-    "lng": 8.002,
+    "lat": 47.045,
+    "lng": 8.313,
     "radius": 120,
     "text": "Beschreibung für Platz 2.",
     "image": "bilder/platz2.jpg",
@@ -19,8 +19,8 @@
   },
   {
     "name": "Platz 3",
-    "lat": 47.0035,
-    "lng": 8.0045,
+    "lat": 47.06,
+    "lng": 8.335,
     "radius": 150,
     "text": "Beschreibung für Platz 3.",
     "image": "bilder/platz3.jpg",
