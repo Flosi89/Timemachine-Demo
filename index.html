@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern v10n – Unified Startbox</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <title>Zeitreise Luzern v10o – Higher Title Box</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root{
       --brand:#caa66d;
       --glass: rgba(25,19,15,.58);
       --text:#f6f3ef;
-      --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+    html,body{margin:0;height:100%;background:#000;color:var(--text);
+      font-family:"Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
 
     /* Startscreen background */
     #start{position:fixed;inset:0;z-index:999;color:var(--text)}
@@ -34,7 +33,7 @@
 
     /* Unified title box */
     .stack{
-      position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
+      position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);
       width:min(92vw, 620px);
       background:var(--glass);
       border-radius:18px;
@@ -68,7 +67,6 @@
     }
     .cta:active{transform:translateY(1px); filter:brightness(.95);}
     .hint{font:600 13px/1.5 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;opacity:.92;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.25)}
-
   </style>
 </head>
 <body>
