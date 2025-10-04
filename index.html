@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern v10e (Map Fix)</title>
+  <title>Zeitreise Luzern v10e (Start-Fix)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     * { box-sizing: border-box; }
     html, body { margin:0; height:100%; background:#000; font-family: system-ui, -apple-system, Roboto, Arial, sans-serif; }
     #camera { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; background:#000; }
-    #imageOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:5; display:none; opacity:.7; transform-origin:center center; will-change: transform, opacity; }
+    #imageOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:5; display:none; opacity:.7; transform-origin:center center; }
     #overlay { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.7); padding:8px 10px; border-radius:10px; font-size:13px; z-index:12; white-space:pre-wrap; }
     #infobox { position:absolute; left:10px; right:10px; bottom:90px; background:rgba(0,0,0,.8); color:#fff; padding:12px; border-radius:12px; z-index:20; display:none; }
     #audio-btn { margin-top:8px; padding:8px 12px; border:none; border-radius:8px; background:#1976d2; color:#fff; font-weight:600; }
@@ -32,7 +32,6 @@
       <h2>🌍 Zeitreise Luzern</h2>
       <p>Tippe auf Start und erlaube Kamera & Standort.</p>
       <button id="startbtn">Start</button>
-      <div style="opacity:.8;margin-top:10px;font-size:13px;">Tipp: oben im Schloss-Symbol Kamera & Standort erlauben.</div>
     </div>
   </div>
 
@@ -62,24 +61,197 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const camera=document.getElementById("camera"), imageOverlay=document.getElementById("imageOverlay"), overlay=document.getElementById("overlay"), infobox=document.getElementById("infobox"), infoTitle=document.getElementById("info-title"), infoText=document.getElementById("info-text"), audioBtn=document.getElementById("audio-btn"), audioPlayer=document.getElementById("audio-player"), opacitySlider=document.getElementById("opacity"), startscreen=document.getElementById("startscreen"), startbtn=document...
-    let map=null, markers=[], places=[], currentPlace=null; const DEFAULT_RADIUS_M=100; let manualMode=false, mapVisible=false;
-  </script>
-  <script>
-    function log(msg){ overlay.style.display='block'; overlay.textContent+=(overlay.textContent?"\n":"")+msg; }
-    async function startCamera(){ try{ const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:"environment"}},audio:false}); camera.srcObject=s; await camera.play().catch(()=>{}); log("🎥 Kamera OK (environment exact)"); } catch(e1){ try{ const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false}); camera.srcObject=s; await camera.play().catch(()=>{}); log("🎥 Kamera OK (environment)"); } catch(e2){ try{ const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); camera.srcObject=s; await camera.play().catch(()=>{}); log("🎥 Kamera OK (fallback)"); } catch(e3){ log("❌ Kamera: "+e3.message); } } } }
-    async function loadPlaces(){ try{ const res=await fetch("orte.json?v="+Date.now()); if(!res.ok) throw new Error("HTTP "+res.status); places=await res.json(); log("✅ Orte geladen: "+places.length); } catch(err){ log("❌ orte.json konnte nicht geladen werden: "+err.message); places=[]; } placeSelect.innerHTML='<option value="">Ort manuell wählen…</option>'; places.forEach((p,idx)=>{ const opt=document.createElement("option"); opt.value=String(idx); opt.textContent=p.name||("Ort "+(idx+1)); placeSelect.appendChild(opt); }); initMap(); }
-    function distKm(lat1,lng1,lat2,lng2){ const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lng2-lng1)*Math.PI/180; const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2; return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
-    function showPlace(place){ if(!place) return; currentPlace=place; imageOverlay.onload=()=>{ imageOverlay.style.display="block"; }; imageOverlay.onerror=()=>{ log("❌ Bildfehler: "+place.image); }; imageOverlay.src = place.image + (place.image.includes("?") ? "&" : "?") + "v=" + Date.now(); infoTitle.textContent = place.name||""; infoText.textContent = place.text||""; if(place.audio){ audioPlayer.src = place.audio + (place.audio.includes("?")?"&":"?") + "v=" + Date.now(); audioBtn.style.display="inline-block"; audioBtn.textContent="▶️ Audio abspielen"; audioBtn.onclick=()=>{ if(audioPlayer.paused){ audioPlayer.play(); audioBtn.textContent="⏸️ Audio pausieren"; } else { audioPlayer.pause(); audioBtn.textContent="▶️ Audio abspielen"; } }; } else { audioBtn.style.display="none"; } infobox.style.display = (place.text||place.audio) ? "block" : "none"; }
-    function setupGPS(){ if(!navigator.geolocation){ log("❌ Geolocation nicht unterstützt"); return; } navigator.geolocation.watchPosition(pos=>{ if(manualMode) return; const lat=pos.coords.latitude, lng=pos.coords.longitude, acc=pos.coords.accuracy; let nearest=null, nearestKm=Infinity; for(const p of places){ const d=distKm(lat,lng,p.lat,p.lng); if(d<nearestKm){ nearestKm=d; nearest=p; } } overlay.textContent = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(acc||0)}m)\nNächster Ort: ${nearest?.name||"-"} (${nearestKm.toFixed(2)} km)`; if(nearest){ const radiusKm=((nearest.radius ?? nearest.radius_m ?? DEFAULT_RADIUS_M)/1000); if(nearestKm <= radiusKm){ showPlace(nearest); } } }, err=> log("❌ Standort: "+err.message), { enableHighAccuracy:true, maximumAge:0, timeout:10000 }); }
-    opacitySlider.addEventListener("input", ()=>{ imageOverlay.style.opacity = opacitySlider.value/100; });
-    imageOverlay.style.touchAction="none"; let state={x:0,y:0,scale:1,rot:0}; function apply(){ imageOverlay.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`; } let dragging=false,last={x:0,y:0}; imageOverlay.addEventListener('pointerdown',e=>{ if(e.target.closest('#ui')) return; dragging=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); }); imageOverlay.addEventListener('pointermove',e=>{ if(!dragging) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; state.x+=dx; state.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); }); imageOverlay.addEventListener('pointerup',()=>dragging=false); imageOverlay.addEventListener('pointercancel',()=>dragging=false);
-    function initMap(){ if(map){ setTimeout(()=>map.invalidateSize(),0); return; } map = L.map('map', { zoomControl: true }); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap-Mitwirkende' }).on('tileerror', ()=> log('❌ Kachel-Download blockiert (Netz/Adblock/CSP?)')).addTo(map); map.setView([47.049, 8.305], 13); const bounds=[]; markers = places.map((p,idx)=>{ if(typeof p.lat!=='number' || typeof p.lng!=='number'){ return null; } const m=L.marker([p.lat,p.lng]).addTo(map); m.bindPopup(`<b>${p.name||('Ort '+(idx+1))}</b><br><button data-idx="${idx}" id="goto_${idx}">Ort anzeigen</button>`); m.on('click',()=>{ m.openPopup(); setTimeout(()=>{ const btn=document.getElementById(`goto_${idx}`); if(btn){ btn.addEventListener('click',()=>{ placeSelect.value=String(idx); placeSelect.dispatchEvent(new Event('change')); toggleMap(false); }); } },50); }); bounds.push([p.lat,p.lng]); return m; }).filter(Boolean); if(bounds.length){ map.fitBounds(bounds,{padding:[40,40]}); } else { log('ℹ️ Keine Orte in orte.json (Pins = 0)'); } }
-    function toggleMap(force){ mapVisible = (typeof force==='boolean') ? force : !mapVisible; document.getElementById('mapWrap').style.display = mapVisible ? 'block' : 'none'; camera.style.display = mapVisible ? 'none' : 'block'; imageOverlay.style.display = mapVisible ? 'none' : imageOverlay.style.display; infobox.style.display = mapVisible ? 'none' : infobox.style.display; toggleMapBtn.textContent = mapVisible ? '📷 Kamera' : '🗺️ Karte'; if(mapVisible){ setTimeout(()=>{ initMap(); map.invalidateSize(); }, 0); } }
+    // ====== DOM Referenzen (KEINE „…“ mehr) ======
+    const camera = document.getElementById("camera");
+    const imageOverlay = document.getElementById("imageOverlay");
+    const overlay = document.getElementById("overlay");
+    const infobox = document.getElementById("infobox");
+    const infoTitle = document.getElementById("info-title");
+    const infoText = document.getElementById("info-text");
+    const audioBtn = document.getElementById("audio-btn");
+    const audioPlayer = document.getElementById("audio-player");
+    const opacitySlider = document.getElementById("opacity");
+    const startscreen = document.getElementById("startscreen");
+    const startbtn = document.getElementById("startbtn");
+    const topBar = document.getElementById("topBar");
+    const placeSelect = document.getElementById("placeSelect");
+    const backToGPS = document.getElementById("backToGPS");
+    const toggleMapBtn = document.getElementById("toggleMap");
+    const mapWrap = document.getElementById("mapWrap");
+
+    let map = null, markers = [];
+    let places = [], currentPlace = null;
+    const DEFAULT_RADIUS_M = 100;
+    let manualMode = false, mapVisible = false;
+
+    function log(msg){
+      overlay.style.display='block';
+      overlay.textContent += (overlay.textContent ? "\n" : "") + msg;
+    }
+
+    async function startCamera(){
+      try{
+        const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:"environment"}},audio:false});
+        camera.srcObject=s; await camera.play().catch(()=>{}); log("🎥 Kamera OK (environment exact)");
+      }catch(e1){
+        try{ const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+          camera.srcObject=s; await camera.play().catch(()=>{}); log("🎥 Kamera OK (environment)");
+        }catch(e2){
+          try{ const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+            camera.srcObject=s; await camera.play().catch(()=>{}); log("🎥 Kamera OK (fallback)");
+          }catch(e3){ log("❌ Kamera: "+e3.message); }
+        }
+      }
+    }
+
+    async function loadPlaces(){
+      try{
+        const res=await fetch("orte.json?v="+Date.now());
+        if(!res.ok) throw new Error("HTTP "+res.status);
+        places=await res.json();
+        log("✅ Orte geladen: "+places.length);
+      }catch(err){
+        log("❌ orte.json konnte nicht geladen werden: "+err.message);
+        places=[];
+      }
+      placeSelect.innerHTML='<option value="">Ort manuell wählen…</option>';
+      places.forEach((p,idx)=>{
+        const opt=document.createElement("option");
+        opt.value=String(idx); opt.textContent=p.name||("Ort "+(idx+1));
+        placeSelect.appendChild(opt);
+      });
+      initMap();
+    }
+
+    function distKm(lat1,lng1,lat2,lng2){
+      const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lng2-lng1)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    }
+
+    function showPlace(place){
+      if(!place) return;
+      currentPlace=place;
+      imageOverlay.onload=()=>{ imageOverlay.style.display="block"; };
+      imageOverlay.onerror=()=>{ log("❌ Bildfehler: "+place.image); };
+      imageOverlay.src=place.image+(place.image.includes("?")?"&":"?")+"v="+Date.now();
+      infoTitle.textContent=place.name||"";
+      infoText.textContent=place.text||"";
+      if(place.audio){
+        audioPlayer.src=place.audio+(place.audio.includes("?")?"&":"?")+"v="+Date.now();
+        audioBtn.style.display="inline-block";
+        audioBtn.textContent="▶️ Audio abspielen";
+        audioBtn.onclick=()=>{
+          if(audioPlayer.paused){ audioPlayer.play(); audioBtn.textContent="⏸️ Audio pausieren"; }
+          else { audioPlayer.pause(); audioBtn.textContent="▶️ Audio abspielen"; }
+        };
+      } else { audioBtn.style.display="none"; }
+      infobox.style.display=(place.text||place.audio)?"block":"none";
+    }
+
+    function setupGPS(){
+      if(!navigator.geolocation){ log("❌ Geolocation nicht unterstützt"); return; }
+      navigator.geolocation.watchPosition(pos=>{
+        if(manualMode) return;
+        const lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;
+        let nearest=null,nearestKm=Infinity;
+        for(const p of places){
+          const d=distKm(lat,lng,p.lat,p.lng);
+          if(d<nearestKm){ nearestKm=d; nearest=p; }
+        }
+        overlay.textContent=`📍 ${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(acc||0)}m)\nNächster Ort: ${nearest?.name||"-"} (${nearestKm.toFixed(2)} km)`;
+        if(nearest){
+          const radiusKm=((nearest.radius ?? nearest.radius_m ?? DEFAULT_RADIUS_M)/1000);
+          if(nearestKm <= radiusKm){ showPlace(nearest); }
+        }
+      }, err=> log("❌ Standort: "+err.message), { enableHighAccuracy:true, maximumAge:0, timeout:10000 });
+    }
+
+    opacitySlider.addEventListener("input",()=>{
+      imageOverlay.style.opacity=opacitySlider.value/100;
+    });
+
+    // Simple Pan (Pointer Events)
+    imageOverlay.style.touchAction="none";
+    let dragging=false,last={x:0,y:0}, state={x:0,y:0,scale:1,rot:0};
+    function apply(){ imageOverlay.style.transform=`translate(${state.x}px, ${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`; }
+    imageOverlay.addEventListener('pointerdown',e=>{ if(e.target.closest('#ui')) return; dragging=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); });
+    imageOverlay.addEventListener('pointermove',e=>{ if(!dragging) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; state.x+=dx; state.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); });
+    imageOverlay.addEventListener('pointerup',()=>dragging=false);
+    imageOverlay.addEventListener('pointercancel',()=>dragging=false);
+
+    // Karte
+    function initMap(){
+      if(map){ setTimeout(()=>map.invalidateSize(),0); return; }
+      map = L.map('map', { zoomControl: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap-Mitwirkende' })
+        .on('tileerror', ()=> log('❌ Kachel-Download blockiert (Netz/Adblock/CSP?)'))
+        .addTo(map);
+      map.setView([47.049, 8.305], 13);
+
+      const bounds=[];
+      markers = places.map((p,idx)=>{
+        if(typeof p.lat!=='number' || typeof p.lng!=='number') return null;
+        const m=L.marker([p.lat,p.lng]).addTo(map);
+        m.bindPopup(`<b>${p.name||('Ort '+(idx+1))}</b><br><button data-idx="${idx}" id="goto_${idx}">Ort anzeigen</button>`);
+        m.on('click',()=>{
+          m.openPopup();
+          setTimeout(()=>{
+            const btn=document.getElementById(`goto_${idx}`);
+            if(btn){
+              btn.addEventListener('click',()=>{
+                placeSelect.value=String(idx);
+                placeSelect.dispatchEvent(new Event('change'));
+                toggleMap(false);
+              });
+            }
+          },50);
+        });
+        bounds.push([p.lat,p.lng]);
+        return m;
+      }).filter(Boolean);
+
+      if(bounds.length){ map.fitBounds(bounds,{padding:[40,40]}); }
+      else { log('ℹ️ Keine Orte in orte.json (Pins = 0)'); }
+    }
+
+    function toggleMap(force){
+      mapVisible = (typeof force==='boolean') ? force : !mapVisible;
+      mapWrap.style.display = mapVisible ? 'block' : 'none';
+      camera.style.display = mapVisible ? 'none' : 'block';
+      imageOverlay.style.display = mapVisible ? 'none' : imageOverlay.style.display;
+      infobox.style.display = mapVisible ? 'none' : infobox.style.display;
+      toggleMapBtn.textContent = mapVisible ? '📷 Kamera' : '🗺️ Karte';
+      if(mapVisible){ setTimeout(()=>{ initMap(); map.invalidateSize(); }, 0); }
+    }
     toggleMapBtn.addEventListener('click', ()=> toggleMap());
-    placeSelect.addEventListener('change', ()=>{ const idx = placeSelect.value ? parseInt(placeSelect.value,10) : NaN; if(!isNaN(idx) && places[idx]){ manualMode = true; showPlace(places[idx]); overlay.textContent = "📍 Manuell gewählt: " + (places[idx].name || ("Ort "+(idx+1))); backToGPS.style.display = "inline-block"; } });
-    backToGPS.addEventListener('click', ()=>{ manualMode=false; backToGPS.style.display="none"; overlay.textContent="↩️ Zurück zu GPS-Automatik"; });
-    startbtn.addEventListener('click', async ()=>{ startscreen.style.display='none'; overlay.style.display='block'; topBar.style.display='flex'; document.getElementById('ui').style.display='grid'; await startCamera(); await loadPlaces(); setupGPS(); });
+
+    // Manuelle Auswahl
+    placeSelect.addEventListener('change', ()=>{
+      const idx = placeSelect.value ? parseInt(placeSelect.value,10) : NaN;
+      if(!isNaN(idx) && places[idx]){
+        manualMode = true;
+        showPlace(places[idx]);
+        overlay.textContent = "📍 Manuell gewählt: " + (places[idx].name || ("Ort "+(idx+1)));
+        backToGPS.style.display = "inline-block";
+      }
+    });
+    backToGPS.addEventListener('click', ()=>{
+      manualMode=false;
+      backToGPS.style.display="none";
+      overlay.textContent="↩️ Zurück zu GPS-Automatik";
+    });
+
+    // Start-Button (jetzt ohne Fehler)
+    startbtn.addEventListener('click', async ()=>{
+      startscreen.style.display='none';
+      overlay.style.display='block';
+      topBar.style.display='flex';
+      document.getElementById('ui').style.display='grid';
+      await startCamera();
+      await loadPlaces();
+      setupGPS();
+    });
   </script>
 </body>
 </html>
