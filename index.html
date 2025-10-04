@@ -3,24 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Luzern v10c</title>
+  <title>Zeitreise Luzern v10d (mit Karte)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     * { box-sizing: border-box; }
-    html, body { margin:0; height:100%; background:#000; font-family: system-ui, Arial, sans-serif; }
+    html, body { margin:0; height:100%; background:#000; font-family: system-ui, -apple-system, Roboto, Arial, sans-serif; }
     #camera { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; background:#000; }
-    #imageOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:5; display:none; opacity:.7; }
-    #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px;
-          background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.8) 100%); z-index:10; }
-    input[type=range] { width:100%; }
+    #imageOverlay { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:5; display:none; opacity:.7; transform-origin:center center; will-change: transform, opacity; }
     #overlay { position:absolute; top:10px; left:10px; right:10px; color:#fff; background:rgba(0,0,0,.7); padding:8px 10px; border-radius:10px; font-size:13px; z-index:12; white-space:pre-wrap; }
     #infobox { position:absolute; left:10px; right:10px; bottom:90px; background:rgba(0,0,0,.8); color:#fff; padding:12px; border-radius:12px; z-index:20; display:none; }
     #audio-btn { margin-top:8px; padding:8px 12px; border:none; border-radius:8px; background:#1976d2; color:#fff; font-weight:600; }
+    #ui { position:absolute; left:0; right:0; bottom:0; padding:12px; display:grid; gap:10px; background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.8) 100%); z-index:10; }
+    input[type=range] { width:100%; }
     #startscreen { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#0b0b0b; color:#fff; z-index:999; text-align:center; padding:24px; }
     #startbtn { padding:12px 20px; border:none; border-radius:12px; background:#1976d2; color:#fff; font-size:18px; font-weight:700; }
-    #manualBar { position:absolute; top:10px; right:10px; z-index:15; display:flex; gap:8px; align-items:center; }
-    #placeSelect, #backToGPS { padding:8px 10px; border-radius:8px; border:none; font-weight:600; }
+    #topBar { position:absolute; top:10px; right:10px; z-index:15; display:flex; gap:8px; align-items:center; }
+    #placeSelect, #backToGPS, #toggleMap { padding:8px 10px; border-radius:8px; border:none; font-weight:600; }
     #placeSelect { background:#ffffff; }
     #backToGPS { background:#1976d2; color:#fff; display:none; }
+    #toggleMap { background:#444; color:#fff; }
+    #mapWrap { position:absolute; inset:0; z-index:30; display:none; }
+    #map { position:absolute; inset:0; }
   </style>
 </head>
 <body>
@@ -31,34 +34,58 @@
       <button id="startbtn">Start</button>
     </div>
   </div>
+
   <div id="overlay" style="display:none;">⏳ Initialisiere…</div>
-  <div id="manualBar" style="display:none;">
-    <select id="placeSelect">
-      <option value="">Ort manuell wählen…</option>
-    </select>
+
+  <div id="topBar" style="display:none;">
+    <select id="placeSelect"><option value="">Ort manuell wählen…</option></select>
     <button id="backToGPS">GPS</button>
+    <button id="toggleMap">🗺️ Karte</button>
   </div>
+
   <video id="camera" autoplay playsinline webkit-playsinline muted></video>
   <img id="imageOverlay" alt="Historisches Overlay">
+
   <div id="infobox">
     <div id="info-title" style="font-weight:700;margin-bottom:6px;"></div>
     <div id="info-text" style="font-size:14px;opacity:.95;"></div>
     <button id="audio-btn">▶️ Audio abspielen</button>
     <audio id="audio-player"></audio>
   </div>
+
   <div id="ui" style="display:none;">
     <input id="opacity" type="range" min="0" max="100" value="70">
   </div>
+
+  <div id="mapWrap"><div id="map"></div></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const camera=document.getElementById("camera"), imageOverlay=document.getElementById("imageOverlay"), overlay=document.getElementById("overlay"), infobox=document.getElementById("infobox"), infoTitle=document.getElementById("info-title"), infoText=document.getElementById("info-text"), audioBtn=document.getElementById("audio-btn"), audioPlayer=document.getElementById("audio-player"), opacitySlider=document.getElementById("opacity"), startscreen=document.getElementById("startscreen"), startbtn=document.getElementById("startbtn"), placeSelect=document.getElementById("placeSelect"), backToGPS=document.getElementById("backToGPS"), manualBar=document.getElementById("manualBar");
-    let places=[], manualMode=false;
-    async function startCamera(){try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});camera.srcObject=s;await camera.play();}catch(e){overlay.textContent="❌ Kamera: "+e.message;}}
-    async function loadPlaces(){const res=await fetch("orte.json?v="+Date.now());places=await res.json();placeSelect.innerHTML='<option value="">Ort manuell wählen…</option>';places.forEach((p,i)=>{const opt=document.createElement("option");opt.value=i;opt.textContent=p.name;placeSelect.appendChild(opt);});}
-    function showPlace(p){imageOverlay.src=p.image;imageOverlay.style.display="block";infoTitle.textContent=p.name;infoText.textContent=p.text;audioBtn.onclick=()=>{new Audio(p.audio).play();};infobox.style.display="block";}
-    startbtn.addEventListener("click",async()=>{startscreen.style.display="none";overlay.style.display="block";manualBar.style.display="flex";document.getElementById("ui").style.display="grid";await startCamera();await loadPlaces();});
-    placeSelect.addEventListener("change",()=>{const idx=parseInt(placeSelect.value,10);if(!isNaN(idx)){manualMode=true;showPlace(places[idx]);overlay.textContent="📍 Manuell: "+places[idx].name;backToGPS.style.display="inline-block";}});
-    backToGPS.addEventListener("click",()=>{manualMode=false;backToGPS.style.display="none";overlay.textContent="↩️ Zurück zu GPS";});
+    const camera=document.getElementById("camera"), imageOverlay=document.getElementById("imageOverlay"), overlay=document.getElementById("overlay"), infobox=document.getElementById("infobox"), infoTitle=document.getElementById("info-title"), infoText=document.getElementById("info-text"), audioBtn=document.getElementById("audio-btn"), audioPlayer=document.getElementById("audio-player"), opacitySlider=document.getElementById("opacity"), startscreen=document.getElementById("startscreen"), startbtn=document.getElementById("startbtn"), topBar=document.getElementById("topBar"), placeSelect=document.getElementById("placeSelect"), backToGPS=document.getElementById("backToGPS"), mapWrap=document.getElementById("mapWrap"), toggleMapBtn=document.getElementById("toggleMap");
+    let map=null, markers=[], places=[], currentPlace=null; const DEFAULT_RADIUS_M=100; let manualMode=false, mapVisible=false;
+
+    function log(msg){ overlay.style.display='block'; overlay.textContent+=(overlay.textContent?"\n":"")+msg; }
+
+    async function startCamera(){try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:"environment"}},audio:false});camera.srcObject=s;await camera.play().catch(()=>{});log("🎥 Kamera OK (environment exact)");return true;}catch(e1){try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});camera.srcObject=s;await camera.play().catch(()=>{});log("🎥 Kamera OK (environment)");return true;}catch(e2){try{const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});camera.srcObject=s;await camera.play().catch(()=>{});log("🎥 Kamera OK (fallback)");return true;}catch(e3){log("❌ Kamera: "+e3.message);return false;}}}}
+
+    async function loadPlaces(){const res=await fetch("orte.json?v="+Date.now());places=await res.json();log("✅ Orte geladen: "+places.length);placeSelect.innerHTML='<option value="">Ort manuell wählen…</option>';places.forEach((p,idx)=>{const opt=document.createElement("option");opt.value=String(idx);opt.textContent=p.name||("Ort "+(idx+1));placeSelect.appendChild(opt);});initMap();}
+
+    function distKm(lat1,lng1,lat2,lng2){const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lng2-lng1)*Math.PI/180;const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+
+    function showPlace(place){if(!place)return;currentPlace=place;imageOverlay.onload=()=>{imageOverlay.style.display="block";};imageOverlay.onerror=()=>{log("❌ Bildfehler: "+place.image);};imageOverlay.src=place.image+(place.image.includes("?")?"&":"?")+"v="+Date.now();infoTitle.textContent=place.name||"";infoText.textContent=place.text||"";if(place.audio){audioPlayer.src=place.audio+(place.audio.includes("?")?"&":"?")+"v="+Date.now();audioBtn.style.display="inline-block";audioBtn.textContent="▶️ Audio abspielen";audioBtn.onclick=()=>{if(audioPlayer.paused){audioPlayer.play();audioBtn.textContent="⏸️ Audio pausieren";}else{audioPlayer.pause();audioBtn.textContent="▶️ Audio abspielen";}};}else{audioBtn.style.display="none";}infobox.style.display=(place.text||place.audio)?"block":"none";}
+
+    function setupGPS(){if(!navigator.geolocation){log("❌ Geolocation nicht unterstützt");return;}navigator.geolocation.watchPosition(pos=>{if(manualMode)return;const lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;let nearest=null,nearestKm=Infinity;for(const p of places){const d=distKm(lat,lng,p.lat,p.lng);if(d<nearestKm){nearestKm=d;nearest=p;}}overlay.textContent=`📍 ${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(acc||0)}m)\nNächster Ort: ${nearest?.name||"-"} (${nearestKm.toFixed(2)} km)`;if(nearest){const radiusKm=((nearest.radius??nearest.radius_m??DEFAULT_RADIUS_M)/1000);if(nearestKm<=radiusKm){showPlace(nearest);}}},err=>log("❌ Standort: "+err.message),{enableHighAccuracy:true,maximumAge:0,timeout:10000});}
+
     opacitySlider.addEventListener("input",()=>{imageOverlay.style.opacity=opacitySlider.value/100;});
+
+    imageOverlay.style.touchAction="none";let state={x:0,y:0,scale:1,rot:0};function apply(){imageOverlay.style.transform=`translate(${state.x}px, ${state.y}px) scale(${state.scale}) rotate(${state.rot}deg)`;}let dragging=false,last={x:0,y:0};imageOverlay.addEventListener('pointerdown',e=>{if(e.target.closest('#ui'))return;dragging=true;last={x:e.clientX,y:e.clientY};imageOverlay.setPointerCapture(e.pointerId);});imageOverlay.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-last.x,dy=e.clientY-last.y;state.x+=dx;state.y+=dy;last={x:e.clientX,y:e.clientY};apply();});imageOverlay.addEventListener('pointerup',()=>dragging=false);imageOverlay.addEventListener('pointercancel',()=>dragging=false);let twoStart=null;const tdist=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);const tangle=(a,b)=>Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX)*180/Math.PI;const tcenter=(a,b)=>({x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2});imageOverlay.addEventListener('touchstart',e=>{if(e.target.closest('#ui'))return;if(e.touches.length===2){const[t1,t2]=[e.touches[0],e.touches[1]];twoStart={dist:tdist(t1,t2),angle:tangle(t1,t2),center:tcenter(t1,t2),baseScale:state.scale,baseRot:state.rot,baseX:state.x,baseY:state.y};}},{passive:false});imageOverlay.addEventListener('touchmove',e=>{if(e.target.closest('#ui'))return;if(e.touches.length===2&&twoStart){e.preventDefault();const[t1,t2]=[e.touches[0],e.touches[1]];const scaleFactor=tdist(t1,t2)/Math.max(1,twoStart.dist);const rotDelta=tangle(t1,t2)-twoStart.angle;state.scale=Math.max(0.2,Math.min(5,twoStart.baseScale*scaleFactor));state.rot=twoStart.baseRot+rotDelta;const c=tcenter(t1,t2);state.x=twoStart.baseX+(c.x-twoStart.center.x);state.y=twoStart.baseY+(c.y-twoStart.center.y);apply();}},{passive:false});imageOverlay.addEventListener('touchend',()=>{twoStart=null;});imageOverlay.addEventListener('touchcancel',()=>{twoStart=null;});
+
+    function initMap(){if(map){setTimeout(()=>{map.invalidateSize();},0);return;}map=L.map('map',{zoomControl:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap-Mitwirkende'}).addTo(map);const bounds=[];markers=places.map((p,idx)=>{const m=L.marker([p.lat,p.lng]).addTo(map);m.bindPopup(`<b>${p.name||('Ort '+(idx+1))}</b><br><button data-idx="${idx}" id="goto_${idx}">Ort anzeigen</button>`);m.on('click',()=>{m.openPopup();setTimeout(()=>{const btn=document.getElementById(`goto_${idx}`);if(btn){btn.addEventListener('click',()=>{placeSelect.value=String(idx);placeSelect.dispatchEvent(new Event('change'));toggleMap(false);});}},50);});bounds.push([p.lat,p.lng]);return m;});if(bounds.length){map.fitBounds(bounds,{padding:[40,40]});}if(navigator.geolocation){navigator.geolocation.getCurrentPosition(pos=>{const {latitude,longitude,accuracy}=pos.coords;L.circle([latitude,longitude],{radius:accuracy||30,color:'#2b8a3e',fillOpacity:0.15}).addTo(map);});}}
+
+    function toggleMap(force){mapVisible=(typeof force==='boolean')?force:!mapVisible;mapWrap.style.display=mapVisible?'block':'none';camera.style.display=mapVisible?'none':'block';imageOverlay.style.display=mapVisible?'none':imageOverlay.style.display;infobox.style.display=mapVisible?'none':infobox.style.display;toggleMapBtn.textContent=mapVisible?'📷 Kamera':'🗺️ Karte';if(mapVisible){setTimeout(()=>{initMap();map.invalidateSize();},0);}}
+    toggleMapBtn.addEventListener('click',()=>toggleMap());
+
+    startbtn.addEventListener('click',async()=>{startscreen.style.display='none';overlay.style.display='block';topBar.style.display='flex';document.getElementById('ui').style.display='grid';await startCamera();await loadPlaces();setupGPS();});
   </script>
 </body>
 </html>
