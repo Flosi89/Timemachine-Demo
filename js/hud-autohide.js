@@ -1,40 +1,42 @@
 (function(){
   const hud = document.getElementById('hud');
+  const infobox = document.getElementById('infobox');
+  const footer = document.getElementById('footer');
   if(!hud) return;
-  let hideTimer;
 
+  let hideTimer;
   const isLandscape = () => window.matchMedia('(orientation: landscape)').matches;
 
+  function setHidden(state){
+    [hud, infobox, footer].forEach(el => {
+      if(!el) return;
+      if(state) el.classList.add('hidden');
+      else el.classList.remove('hidden');
+    });
+  }
+
   function scheduleHide(){
-    if(!isLandscape()) return; // Autohide nur im Querformat
+    if(!isLandscape()) return;
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => hud.classList.add('hidden'), 2500);
+    hideTimer = setTimeout(() => setHidden(true), 2500);
   }
 
   function showHUD(){
-    hud.classList.remove('hidden');
-    if(isLandscape()) scheduleHide();
+    setHidden(false);
+    scheduleHide();
   }
 
-  // Maus-/Touchbewegung → HUD zeigen
-  ['pointerdown','mousemove','touchstart','keydown','wheel'].forEach(evt=>{
-    window.addEventListener(evt, showHUD, {passive:true});
+  ['pointerdown','mousemove','touchstart','keydown','wheel']
+    .forEach(evt => window.addEventListener(evt, showHUD, {passive:true}));
+
+  [hud, infobox, footer].forEach(el => {
+    if(!el) return;
+    el.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    el.addEventListener('mouseleave', scheduleHide);
   });
 
-  // Wenn Hochformat aktiv, HUD immer sichtbar
-  function handleOrientationChange(){
-    if(isLandscape()){
-      showHUD();
-    } else {
-      hud.classList.remove('hidden'); // sichtbar halten
-      clearTimeout(hideTimer);
-    }
-  }
+  window.matchMedia('(orientation: landscape)')
+    .addEventListener('change', showHUD);
 
-  hud.addEventListener('mouseenter', ()=> clearTimeout(hideTimer));
-  hud.addEventListener('mouseleave', scheduleHide);
-  window.matchMedia('(orientation: landscape)').addEventListener('change', handleOrientationChange);
-
-  // Initialzustand
-  handleOrientationChange();
+  showHUD();
 })();
