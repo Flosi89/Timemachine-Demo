@@ -1,63 +1,50 @@
-(function(){
+(function() {
   const hud = document.getElementById('hud');
   const infobox = document.getElementById('infobox');
   const footer = document.getElementById('footer');
-  const select = document.getElementById('placeSelect');
-  if(!hud) return;
+  if (!hud) return;
 
   let hideTimer;
   const isLandscape = () => window.matchMedia('(orientation: landscape)').matches;
-  let paused = false;
 
-  function setHidden(state){
-    if(paused) return;
-    [hud, infobox, footer].forEach(el => {
-      if(!el) return;
-      if(state) el.classList.add('hidden');
-      else el.classList.remove('hidden');
-    });
+  function setHiddenState(hidden) {
+    // Nur im Querformat ausblenden
+    if (isLandscape()) {
+      [hud, infobox, footer].forEach(el => {
+        if (!el) return;
+        if (hidden) el.classList.add('hidden');
+        else el.classList.remove('hidden');
+      });
+    } else {
+      // Im Hochformat immer sichtbar
+      [hud, infobox, footer].forEach(el => {
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.style.opacity = '1';
+        el.style.pointerEvents = 'auto';
+      });
+    }
   }
 
-  function scheduleHide(){
-    if(!isLandscape() || paused) return;
+  function scheduleHide() {
+    if (!isLandscape()) return;
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => setHidden(true), 2500);
+    hideTimer = setTimeout(() => setHiddenState(true), 2500);
   }
 
-  function showHUD(){
-    setHidden(false);
+  function showHUD() {
+    setHiddenState(false);
     scheduleHide();
   }
 
-  // Reaktion auf Nutzerinteraktionen
-  ['pointerdown','mousemove','touchstart','keydown','wheel']
-    .forEach(evt => window.addEventListener(evt, showHUD, {passive:true}));
-
-  [hud, infobox, footer].forEach(el => {
-    if(!el) return;
-    el.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-    el.addEventListener('mouseleave', scheduleHide);
+  ['pointerdown', 'mousemove', 'touchstart', 'keydown', 'wheel'].forEach(evt => {
+    window.addEventListener(evt, showHUD, { passive: true });
   });
 
-  // Dropdown-Auswahl fix
-  if(select){
-    select.addEventListener('focus', () => {
-      paused = true;
-      setHidden(false);
-      clearTimeout(hideTimer);
-    });
-    // kleine Verzögerung, damit Android nicht sofort blur feuert
-    select.addEventListener('change', () => {
-      paused = false;
-      scheduleHide();
-    });
-    select.addEventListener('blur', () => {
-      setTimeout(() => { paused = false; scheduleHide(); }, 800);
-    });
-  }
+  hud.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+  hud.addEventListener('mouseleave', scheduleHide);
 
-  window.matchMedia('(orientation: landscape)')
-    .addEventListener('change', showHUD);
+  window.matchMedia('(orientation: landscape)').addEventListener('change', showHUD);
 
   showHUD();
 })();
