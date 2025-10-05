@@ -1,4 +1,4 @@
-/* v11b: Compact infobox ONLY in landscape */
+/* v11c: Compact infobox ONLY in landscape */
 @media (orientation: landscape) {
   #infobox.info-box{
     left: 12px;
