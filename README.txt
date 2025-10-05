@@ -1,1 +1,1 @@
-v11c Startfix: Start-Button robust (touch+click+overlay), pointer-events Fix. Portrait unverändert, Landscape-UI + kompakte Infobox aktiv.
+Zeitreise Tribschen — v11b: Landscape HUD + kompakte Infobox (nur landscape). Portrait bleibt unverändert.
