@@ -3,35 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Zeitreise Tribschen – Landscape UI</title>
+  <title>Zeitreise Tribschen – v11b</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="css/hud-landscape.css">
+  <link rel="stylesheet" href="css/infobox-landscape-compact.css">
   <style>
-    :root{--brand:#d5b27a;--glass:rgba(25,19,15,.58);--text:#f6f3ef;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
+    :root{
+      --brand:#d5b27a;
+      --glass: rgba(25,19,15,.58);
+      --text:#f6f3ef;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-    #camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:0;display:none}
+    html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Inter", system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+
+    #camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:0;display:none;}
     #imageOverlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;opacity:.7;transform-origin:center center;z-index:5}
     #infobox{position:absolute;left:10px;right:10px;bottom:calc(70px + var(--safe-bottom));background:rgba(0,0,0,.8);padding:14px;border-radius:14px;z-index:15;display:none}
     #title{font-size:18px;font-weight:900;margin:0 0 6px 0}
     #desc{font-size:15px;opacity:.95;margin:0}
-    #audio-btn{margin-top:10px;padding:10px 14px;border:none;border-radius:10px;background:var(--brand);color:#1a130e;font-weight:800;font-family:inherit}
+    #audio-btn{margin-top:10px;padding:10px 14px;border:none;border-radius:10px;background:var(--brand);color:#1a130e;font-weight:800;font-family:inherit;}
     #footer{position:absolute;left:0;right:0;bottom:0;padding:0 14px calc(10px + var(--safe-bottom));z-index:14;display:none}
     #opacity{width:100%}
     #mapWrap{position:absolute;inset:0;display:none;z-index:18}
     #map{position:absolute;inset:0}
-    .start-screen{position:fixed;inset:0;z-index:999;opacity:0;animation:fadeIn 900ms ease forwards}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)}}
-    .start-screen::before{content:"";position:absolute;inset:0;background-image:url("Bilder/zeppelin_tribschen.jpg");background-size:cover;background-position:center 35%;filter:sepia(.45) contrast(.92) brightness(.9);opacity:.86}
-    .start-screen::after{content:"";position:absolute;inset:0;background:radial-gradient(110% 85% at 50% 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);pointer-events:none}
-    .stack{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%);width:min(92vw,720px);background:var(--glass);border-radius:20px;outline:1px solid rgba(255,255,255,.06);box-shadow:0 16px 42px rgba(0,0,0,.35);text-align:center;backdrop-filter:saturate(110%) blur(2px);padding:18px 26px 20px}
-    h1{font-family:"Playfair Display",serif;font-weight:700;letter-spacing:.2px;font-size:clamp(26px,6.2vw,44px);line-height:1.12;margin:0 0 10px;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.28)}
-    .subtitle{font-weight:600;letter-spacing:.2px;font-size:clamp(14px,4.2vw,18px);line-height:1.45;margin:0;opacity:.96}
-    .cta-wrap{position:absolute;left:50%;bottom:calc(28px + var(--safe-bottom));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
-    .cta{display:inline-block;font-weight:800;letter-spacing:.3px;font-size:clamp(16px,4.6vw,18px);padding:14px 24px;border:0;border-radius:999px;background:linear-gradient(180deg,#e7c791,#caa66d);color:#1a130e;box-shadow:0 12px 26px rgba(0,0,0,.28)}
-    .cta:active{transform:translateY(1px);filter:brightness(.95)}
-    .hint{font:600 13px/1.5 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:.92;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+
+    .start-screen{position:fixed;inset:0;z-index:999;opacity:0;animation:fadeIn 900ms ease forwards;}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)}}
+    .start-screen::before{
+      content:"";position:absolute;inset:0;
+      background-image:url("Bilder/zeppelin_tribschen.jpg");
+      background-size:cover;background-position:center 35%;
+      filter:sepia(.45) contrast(.92) brightness(.9);
+      opacity:.86;
+    }
+    .start-screen::after{content:"";position:absolute;inset:0;background:radial-gradient(110% 85% at 50% 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);pointer-events:none;}
+    .stack{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%);width:min(92vw, 720px);background:var(--glass);border-radius:20px;outline:1px solid rgba(255,255,255,.06);box-shadow:0 16px 42px rgba(0,0,0,.35);text-align:center;backdrop-filter:saturate(110%) blur(2px);padding:18px 26px 20px;}
+    h1{font-family:"Playfair Display", serif;font-weight:700;letter-spacing:.2px;font-size: clamp(26px, 6.2vw, 44px);line-height:1.12;margin:0 0 10px;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.28);}
+    .subtitle{font-weight:600;letter-spacing:.2px;font-size: clamp(14px, 4.2vw, 18px);line-height:1.45;margin:0;opacity:.96}
+    .cta-wrap{position:absolute;left:50%;bottom:calc(28px + var(--safe-bottom));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;}
+    .cta{display:inline-block;font-weight:800;letter-spacing:.3px;font-size: clamp(16px, 4.6vw, 18px);padding:14px 24px;border:0;border-radius:999px;background:linear-gradient(180deg, #e7c791, #caa66d);color:#1a130e;box-shadow:0 12px 26px rgba(0,0,0,.28);}
+    .cta:active{transform:translateY(1px); filter:brightness(.95);}
+    .hint{font:600 13px/1.5 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;opacity:.92;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.25)}
   </style>
 </head>
 <body>
@@ -46,7 +61,7 @@
     </div>
   </div>
 
-  <!-- HUD (hidden until start) -->
+  <!-- HUD compact (Landscape only styling) -->
   <div id="hud" style="display:none">
     <select id="placeSelect" class="place-select"><option value="">Ort wählen…</option></select>
     <div style="display:flex; gap:8px">
@@ -170,7 +185,7 @@
     let drag=false,last={x:0,y:0}, st={x:0,y:0,scale:1,rot:0};
     function apply(){ imageOverlay.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale}) rotate(${st.rot}deg)`; }
     imageOverlay.addEventListener('pointerdown', e=>{ if(e.target.closest('#footer')) return; drag=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); });
-    imageOverlay.addEventListener('pointermove', e=>{ if(!drag) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; st.x+=dx; st.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); });
+    imageOverlay.addEventListener('pointermove', e=>{ if(!drag) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; st.x+=dx; st.y+=dy; last={x:e.clientX,y=e.clientY}; apply(); });
     imageOverlay.addEventListener('pointerup', ()=> drag=false);
     imageOverlay.addEventListener('pointercancel', ()=> drag=false);
 
@@ -222,7 +237,7 @@
     startbtn.addEventListener('click', async ()=>{
       document.getElementById('start')?.remove();
       camera.style.display='block';
-      hud.style.display='flex';      // show HUD
+      hud.style.display='flex';
       footer.style.display='block';
       await startCamera();
       await loadPlaces();
