@@ -1,93 +1,107 @@
-/* --- Landscape Mode Styles (Querformat) --- */
-@media (orientation: landscape) {
-
-  /* HUD-Leiste oben */
-  #hud {
+/* ---------- PORTRAIT (Hochformat) ---------- */
+@media (orientation: portrait) {
+  /* HUD oben sichtbar (kein Autohide in Portrait) */
+  #hud{
     position: fixed;
-    top: 8px;
-    left: 8px;
-    right: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
+    top: 10px; left: 10px; right: 10px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
     z-index: 9;
-    transition: opacity 0.4s ease;
+    opacity: 1 !important;            /* überschreibt .hidden aus JS */
+    pointer-events: auto !important;  /* überschreibt .hidden aus JS */
   }
 
-  #hud.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* Dropdown */
-  .place-select {
-    max-width: 50vw;
-    height: 36px;
-    padding: 4px 30px 4px 10px;
-    font-size: 13px;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.15);
+  .place-select{
+    width: 65vw; max-width: 520px; height: 42px;
+    padding: 6px 34px 6px 12px; font-size: 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.15);
     color: #fff;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0,0,0,.55);
     backdrop-filter: blur(6px) saturate(110%);
   }
 
-  /* Buttons */
-  .icon-btn {
-    width: 40px;
-    height: 40px;
-    display: inline-grid;
-    place-items: center;
-    font-size: 18px;
+  .icon-btn{
+    width: 44px; height: 44px; display: inline-grid; place-items: center;
+    font-size: 20px; color: #fff;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 14px rgba(0,0,0,.22);
+  }
+
+  /* Infobox unten mittig */
+  #infobox.info-box{
+    position: fixed;
+    left: 10px; right: 10px; bottom: 72px;
+    background: rgba(0,0,0,.65);
+    border-radius: 14px; padding: 14px 16px;
+    z-index: 10;
+    opacity: 1 !important;            /* niemals ausblenden in Portrait */
+    pointer-events: auto !important;
+  }
+
+  /* Slider unten */
+  #footer.zoom-wrap{
+    position: fixed;
+    left: 10px; right: 10px; bottom: 12px;
+    padding: 0;
+    opacity: 1 !important; pointer-events: auto !important;
+  }
+  #footer.zoom-wrap #opacity{ height: 4px; }
+}
+
+/* ---------- LANDSCAPE (Querformat) ---------- */
+@media (orientation: landscape) {
+
+  /* HUD-Leiste oben (mit Autohide) */
+  #hud{
+    position: fixed;
+    top: 8px; left: 8px; right: 8px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    z-index: 9; transition: opacity .4s ease;
+  }
+  #hud.hidden{ opacity: 0; pointer-events: none; }
+
+  .place-select{
+    max-width: 50vw; height: 36px;
+    padding: 4px 30px 4px 10px; font-size: 13px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.15);
     color: #fff;
-    background: rgba(0,0,0,0.55);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(6px) saturate(110%);
+  }
+
+  .icon-btn{
+    width: 40px; height: 40px; display: inline-grid; place-items: center;
+    font-size: 18px; color: #fff;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.1);
     border-radius: 10px;
     backdrop-filter: blur(6px);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.22);
-    transition: transform 0.2s ease, opacity 0.4s ease;
+    box-shadow: 0 4px 14px rgba(0,0,0,.22);
+    transition: transform .2s ease, opacity .4s ease;
   }
+  .icon-btn:active{ transform: translateY(1px); }
 
-  .icon-btn:active {
-    transform: translateY(1px);
-  }
-
-  /* --- Schwarze Infobox unten links --- */
-  #infobox.info-box {
+  /* Infobox unten links (autohide) */
+  #infobox.info-box{
     position: fixed;
-    left: 14px;
-    bottom: 60px;
-    width: 45vw;
-    max-width: 360px;
-    background: rgba(0,0,0,0.6);
-    border-radius: 12px;
-    padding: 12px 16px;
-    z-index: 10;
-    transition: opacity 0.4s ease;
+    left: 14px; bottom: 60px;
+    width: 45vw; max-width: 360px;
+    background: rgba(0,0,0,.6);
+    border-radius: 12px; padding: 12px 16px;
+    z-index: 10; transition: opacity .4s ease;
   }
+  #infobox.info-box.hidden{ opacity: 0; pointer-events: none; }
 
-  #infobox.info-box.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* --- Footer / Slider unten --- */
-  #footer.zoom-wrap {
+  /* Slider unten (autohide) */
+  #footer.zoom-wrap{
     position: fixed;
-    left: 14px;
-    right: 14px;
-    bottom: 14px;
-    padding: 0;
-    transition: opacity 0.4s ease;
+    left: 14px; right: 14px; bottom: 14px;
+    padding: 0; transition: opacity .4s ease;
   }
-
-  #footer.zoom-wrap.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  #footer.zoom-wrap #opacity {
-    height: 4px;
-  }
+  #footer.zoom-wrap.hidden{ opacity: 0; pointer-events: none; }
+  #footer.zoom-wrap #opacity{ height: 4px; }
 }
