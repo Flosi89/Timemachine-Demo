@@ -56,7 +56,6 @@
 
   <video id="camera" autoplay playsinline webkit-playsinline muted></video>
   <img id="imageOverlay" alt="Overlay">
-
   <div id="mapWrap"><div id="map"></div></div>
 
   <div id="infobox" class="info-box">
@@ -66,12 +65,170 @@
     <audio id="audio"></audio>
   </div>
 
-  <div id="footer" class="zoom-wrap"><input id="opacity" type="range" min="0" max="100" value="70"></div>
+  <div id="footer" class="zoom-wrap">
+    <input id="opacity" type="range" min="0" max="100" value="70">
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/hud-autohide.js"></script>
+
   <script>
-  /* dein bestehendes JavaScript-Code aus deiner letzten Version hier (wie oben gepostet) */
+    const startbtn = document.getElementById('startbtn');
+    const camera = document.getElementById('camera');
+    const imageOverlay = document.getElementById('imageOverlay');
+    const hud = document.getElementById('hud');
+    const infobox = document.getElementById('infobox');
+    const footer = document.getElementById('footer');
+    const placeSelect = document.getElementById('placeSelect');
+    const gpsBtn = document.getElementById('gpsBtn');
+    const toggleMapBtn = document.getElementById('toggleMap');
+    const mapWrap = document.getElementById('mapWrap');
+    const audioBtn = document.getElementById('audio-btn');
+    const audioPlayer = document.getElementById('audio');
+    const titleEl = document.getElementById('title');
+    const descEl = document.getElementById('desc');
+    const opacity = document.getElementById('opacity');
+    let places=[], manual=false, map=null, mapVisible=false;
+
+    async function startCamera(){
+      try{
+        const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'}},audio:false});
+        camera.srcObject=s; await camera.play().catch(()=>{});
+      }catch{
+        try{
+          const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+          camera.srcObject=s; await camera.play().catch(()=>{});
+        }catch(e){ console.warn('Kamera:', e.message); }
+      }
+    }
+
+    async function loadPlaces(){
+      try{
+        const res=await fetch('orte.json?v='+Date.now());
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        places=await res.json();
+        if(!Array.isArray(places) || places.length===0) throw new Error('Leere Liste');
+      }catch(e){
+        places=[{name:'Platz 1',lat:47.0495,lng:8.31,radius:120,text:'Fallback 1',image:'Bilder/platz1.jpg'}];
+        console.warn('orte.json:', e.message, '→ Fallback verwendet');
+      }
+      placeSelect.innerHTML='<option value="">Ort wählen…</option>';
+      places.forEach((p,i)=>{
+        const opt=document.createElement('option');
+        opt.value=String(i); opt.textContent=p.name||('Ort '+(i+1));
+        placeSelect.appendChild(opt);
+      });
+      initMap();
+    }
+
+    function distKm(lat1,lng1,lat2,lng2){
+      const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lng2-lng1)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function showPlace(p){
+      if(!p) return;
+      imageOverlay.onload=()=> { imageOverlay.style.display='block'; camera.style.display='block'; };
+      imageOverlay.onerror=()=> console.warn('Bildfehler:', p.image);
+      imageOverlay.src=p.image+(p.image.includes('?')?'&':'?')+'v='+Date.now();
+      titleEl.textContent=p.name||'';
+      descEl.textContent=p.text||'';
+      if(p.audio){
+        audioPlayer.src = p.audio+(p.audio.includes('?')?'&':'?')+'v='+Date.now();
+        audioBtn.style.display='inline-block';
+        audioBtn.textContent='▶️ Audio abspielen';
+        audioBtn.onclick=()=>{
+          if(audioPlayer.paused){ audioPlayer.play(); audioBtn.textContent='⏸️ Pause'; }
+          else { audioPlayer.pause(); audioBtn.textContent='▶️ Audio abspielen'; }
+        };
+      }else{
+        audioBtn.style.display='none';
+      }
+      infobox.style.display=(p.text||p.audio)?'block':'none';
+    }
+
+    function setupGPS(){
+      if(!navigator.geolocation){ return; }
+      navigator.geolocation.watchPosition(pos=>{
+        if(manual) return;
+        const {latitude:lat, longitude:lng} = pos.coords;
+        let best=null, bestKm=1e9;
+        for(const p of places){
+          const d=distKm(lat,lng,p.lat,p.lng);
+          if(d<bestKm){ bestKm=d; best=p; }
+        }
+        if(best){
+          const rKm=((best.radius ?? best.radius_m ?? 100)/1000);
+          if(bestKm<=rKm) showPlace(best);
+        }
+      }, err=> console.warn('GPS:', err.message), {enableHighAccuracy:true});
+    }
+
+    opacity.addEventListener('input', ()=> imageOverlay.style.opacity = opacity.value/100 );
+
+    imageOverlay.style.touchAction='none';
+    let drag=false,last={x:0,y:0}, st={x:0,y:0,scale:1,rot:0};
+    function apply(){ imageOverlay.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale}) rotate(${st.rot}deg)`; }
+    imageOverlay.addEventListener('pointerdown', e=>{ if(e.target.closest('#footer')) return; drag=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); });
+    imageOverlay.addEventListener('pointermove', e=>{ if(!drag) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; st.x+=dx; st.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); });
+    imageOverlay.addEventListener('pointerup', ()=> drag=false);
+    imageOverlay.addEventListener('pointercancel', ()=> drag=false);
+
+    function initMap(){
+      if(map){ setTimeout(()=>map.invalidateSize(),0); return; }
+      map = L.map('map', { zoomControl:true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap-Mitwirkende'
+      }).addTo(map);
+      map.setView([47.049,8.305],13);
+      const bounds=[];
+      places.forEach((p,i)=>{
+        if(typeof p.lat!=='number'||typeof p.lng!=='number') return;
+        const m=L.marker([p.lat,p.lng]).addTo(map);
+        m.bindPopup(`<b>${p.name||('Ort '+(i+1))}</b><br><button id="goto_${i}">Ort anzeigen</button>`);
+        m.on('click',()=>{
+          m.openPopup();
+          setTimeout(()=>{
+            const btn=document.getElementById('goto_'+i);
+            if(btn){ btn.addEventListener('click',()=>{
+              placeSelect.value=String(i);
+              placeSelect.dispatchEvent(new Event('change'));
+              toggleMap(false);
+            });}
+          },50);
+        });
+        bounds.push([p.lat,p.lng]);
+      });
+      if(bounds.length) map.fitBounds(bounds,{padding:[40,40]});
+    }
+
+    function toggleMap(force){
+      mapVisible = (typeof force==='boolean') ? force : !mapVisible;
+      mapWrap.style.display = mapVisible ? 'block' : 'none';
+      camera.style.display = mapVisible ? 'none' : 'block';
+      imageOverlay.style.display = mapVisible ? 'none' : imageOverlay.style.display;
+      infobox.style.display = mapVisible ? 'none' : infobox.style.display;
+      toggleMapBtn.textContent = mapVisible ? '📷' : '🗺️';
+      if(mapVisible){ setTimeout(()=>{ initMap(); map.invalidateSize(); }, 0); }
+    }
+    toggleMapBtn.addEventListener('click', ()=> toggleMap());
+
+    placeSelect.addEventListener('change', ()=>{
+      const i = placeSelect.value ? parseInt(placeSelect.value,10) : NaN;
+      if(!isNaN(i) && places[i]){ manual = true; showPlace(places[i]); }
+    });
+    gpsBtn.addEventListener('click', ()=>{ manual=false; });
+
+    startbtn.addEventListener('click', async ()=>{
+      document.getElementById('start')?.remove();
+      camera.style.display='block';
+      hud.style.display='flex';
+      footer.style.display='block';
+      await startCamera();
+      await loadPlaces();
+      setupGPS();
+    });
   </script>
 </body>
 </html>
