@@ -1,0 +1,98 @@
+/* ====== Basis ====== */
+:root{
+  --glass: rgba(15,15,15,.6);
+  --glass-strong: rgba(10,10,10,.75);
+  --text: #fff;
+  --brand: #e1c186;
+  --gap: 10px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+
+/* ====== HUD (Ort / GPS / Karte) ====== */
+.hud{
+  position:fixed; display:flex; gap:var(--gap);
+  padding:10px; background:var(--glass); backdrop-filter:blur(6px);
+  border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+  z-index:40;
+}
+/* Portrait: oben rechts unter Browser-UI */
+@media (orientation:portrait){
+  .hud{ top:calc(8px + var(--safe-top)); right:calc(8px + var(--safe-right)); }
+}
+/* Landscape: oben links, damit rechte Seite frei bleibt */
+@media (orientation:landscape){
+  .hud{ top:calc(8px + var(--safe-top)); left:calc(12px + var(--safe-left)); }
+}
+
+/* hidden state (collapsed) */
+.hud--hidden{ opacity:0; pointer-events:none; transform:translateY(-6px); transition:.18s ease; }
+.hud:not(.hud--hidden){ opacity:1; transform:translateY(0); transition:.18s ease; }
+
+.select{
+  appearance:none; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.06);
+  color:var(--text); border-radius:10px; padding:10px 14px; min-width:160px; outline:none;
+}
+.btn{
+  border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.08); color:var(--text);
+  border-radius:999px; padding:10px 14px; font-weight:600;
+}
+.btn--primary{ background:linear-gradient(180deg,#ffdca0,#caa66d); color:#20160e; border-color:rgba(0,0,0,.15); }
+
+/* ====== FABs ====== */
+.fab{
+  position:fixed; width:44px; height:44px; border-radius:50%;
+  right:calc(10px + var(--safe-right)); background:var(--glass-strong);
+  color:var(--text); border:0; box-shadow:0 10px 30px rgba(0,0,0,.4);
+  display:grid; place-items:center; z-index:50; font-size:20px;
+}
+/* Portrait: oben rechts gestapelt */
+@media (orientation:portrait){
+  .fab{ top:calc(10px + var(--safe-top)); }
+  .fab.fab--secondary{ top:calc(60px + var(--safe-top)); }
+}
+/* Landscape: unten rechts gestapelt */
+@media (orientation:landscape){
+  .fab{ bottom:calc(12px + var(--safe-bottom)); }
+  .fab.fab--secondary{ bottom:calc(66px + var(--safe-bottom)); }
+}
+
+/* ====== Info Panel ====== */
+/* Portrait: unten volle Breite (wie bisher) */
+@media (orientation:portrait){
+  .info-panel{
+    position:fixed; left:12px; right:12px; bottom:calc(70px + var(--safe-bottom));
+    background:var(--glass); border-radius:14px; padding:14px 16px;
+    backdrop-filter:blur(6px); box-shadow:0 10px 30px rgba(0,0,0,.35); z-index:30;
+    transition:transform .18s ease, opacity .18s ease;
+  }
+}
+/* Landscape: kompakt und links unten, schmal damit Bild frei bleibt */
+@media (orientation:landscape){
+  .info-panel{
+    position:fixed; left:calc(16px + var(--safe-left)); bottom:calc(18px + var(--safe-bottom));
+    max-width:min(48vw, 520px);
+    background:var(--glass); border-radius:16px; padding:12px 16px;
+    backdrop-filter:blur(6px); box-shadow:0 12px 36px rgba(0,0,0,.42); z-index:30;
+    transition:transform .18s ease, opacity .18s ease;
+  }
+}
+
+/* collapsed state for info */
+.infobox--hidden{ opacity:0; transform:translateY(8px); pointer-events:none; }
+
+.info-title{ font-weight:800; font-size:20px; margin:0 0 6px }
+.info-text{ opacity:.95 }
+
+/* ====== Zoom ====== */
+.zoom{
+  position:fixed; left:16px; right:16px; bottom:calc(12px + var(--safe-bottom)); z-index:25;
+  accent-color:#2e6bf8;
+}
+@media (orientation:landscape){
+  .zoom{ left:calc(16px + var(--safe-left)); right:calc(16px + var(--safe-right)); }
+}
