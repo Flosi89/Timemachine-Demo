@@ -1,19 +1,25 @@
-Zeitreise Tribschen – PWA Release
+OVERLAY — Landscape-Only UI Add-on
+==================================
 
-Was ist drin:
-- index.html (Vintage-Startscreen, funktionierender Start-Flow)
-- manifest.webmanifest (Name: Zeitreise Tribschen)
-- sw.js (Caching der wichtigsten Dateien; Netz zuerst, Cache-Fallback)
-- icons/icon-192.png, icons/icon-512.png (Platzhalter-Icons)
-- orte.json (Platzhalter)
-- Bilder/zeppelin_tribschen.jpg (Platzhalter), Bilder/platz1.jpg (Platzhalter)
+Das hier ist ein *Overlay*: Füge es in dein bestehendes Projekt.
+Portrait bleibt unverändert; Querformat wird kompakt & seitlich.
 
-So nutzt du es:
-1) Ersetze die Platzhalterbilder in /Bilder durch deine echten Dateien.
-2) Ergänze weitere Bilder/Audios in sw.js -> ASSETS[], damit sie offline verfügbar sind.
-3) Lade alles über HTTPS hoch (GitHub Pages, Netlify, Vercel).
-4) Öffne die Seite am Handy und „Zum Startbildschirm hinzufügen“ (Android) bzw. „Zum Home-Bildschirm“ (iOS).
+Dateien:
+- css/hud-landscape.css
+- js/hud-autohide.js
+- example_index.html  (nur als Referenz für die nötigen IDs/Klassen)
 
-Hinweise:
-- Kamera/GPS funktionieren nur über HTTPS oder localhost.
-- Beim ersten Start erscheint die Berechtigungsabfrage erst nach Klick auf „Zeitreise starten“.
+Einbau:
+1) In deiner index.html einbinden:
+   <link rel="stylesheet" href="css/hud-landscape.css">
+   ...
+   <script src="js/hud-autohide.js"></script>
+
+2) Stelle sicher, dass die Elemente so benannt sind:
+   - HUD-Wrapper: id="hud"
+   - Dropdown: class="place-select"
+   - GPS/Karte-Buttons: class="icon-btn"
+   - Info-Box: class="info-box"
+   - Slider-Wrapper: class="zoom-wrap"
+
+Nur wenn die Klassen/IDs vorhanden sind, greift das Styling im Querformat.

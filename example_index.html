@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beispiel – Landscape HUD Overlay</title>
+  <style>
+    body{margin:0;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    /* Nur demo: simuliertes Kamerabild */
+    .camera{position:fixed;inset:0;background:#222 url('https://picsum.photos/1200/800?blur=2') center/cover no-repeat;}
+    /* Demo-InfoBox Grundstil (Portrait bleibt so) */
+    .info-box{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);
+      background:rgba(0,0,0,.6);padding:14px 16px;border-radius:12px;max-width:min(92vw,520px)}
+    .zoom-wrap{position:fixed;left:20px;right:20px;bottom:20px;height:6px}
+    input[type=range]{width:100%}
+  </style>
+  <link rel="stylesheet" href="css/hud-landscape.css">
+</head>
+<body>
+  <div class="camera"></div>
+
+  <!-- HUD-Wrapper: enthält Dropdown + Buttons -->
+  <div id="hud">
+    <select class="place-select">
+      <option>Platz 1</option>
+      <option>Platz 2</option>
+      <option>Platz 3</option>
+    </select>
+    <div class="hud-right" style="display:flex;gap:8px">
+      <button class="icon-btn" title="GPS">📍</button>
+      <button class="icon-btn" title="Karte">🗺️</button>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>Platz 1</strong><br>
+    Beschreibung des Ortes…
+  </div>
+
+  <div class="zoom-wrap">
+    <input type="range" min="0" max="100" value="50">
+  </div>
+
+  <script src="js/hud-autohide.js"></script>
+</body>
+</html>
