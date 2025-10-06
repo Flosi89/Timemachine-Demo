@@ -8,11 +8,11 @@
     "image": "Bilder/platz1.jpg"
   },
   {
-    "name": "Werkhofstrasse",
+    "name": "Brennpunkt: Werkhofstrasse",
     "lat": 47.0445,
     "lng": 8.3152,
     "radius": 120,
-    "text": "Brennpunkt: Werkhofstrasse.",
+    "text": "Leserbrief in der Luzerner Zeitung von 2011.",
     "audio": "Audio/Werkhofstrasse.mp3"
   }
 ]
