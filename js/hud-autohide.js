@@ -1,50 +1,79 @@
-(function() {
-  const hud = document.getElementById('hud');
+(function(){
+  const hud     = document.getElementById('hud');
   const infobox = document.getElementById('infobox');
-  const footer = document.getElementById('footer');
-  if (!hud) return;
+  const footer  = document.getElementById('footer');
+  const select  = document.getElementById('placeSelect');
+  if(!hud) return;
 
   let hideTimer;
+  let paused = false;          // pausiert Autohide (z.B. solange Dropdown offen)
+  let dropdownOpen = false;    // expliziter Zustand fürs Select
   const isLandscape = () => window.matchMedia('(orientation: landscape)').matches;
 
-  function setHiddenState(hidden) {
-    // Nur im Querformat ausblenden
-    if (isLandscape()) {
-      [hud, infobox, footer].forEach(el => {
-        if (!el) return;
-        if (hidden) el.classList.add('hidden');
-        else el.classList.remove('hidden');
-      });
-    } else {
-      // Im Hochformat immer sichtbar
-      [hud, infobox, footer].forEach(el => {
-        if (!el) return;
-        el.classList.remove('hidden');
-        el.style.opacity = '1';
-        el.style.pointerEvents = 'auto';
-      });
+  function setHidden(state){
+    // Nur im Landscape darf ausgeblendet werden
+    if(!isLandscape()) {
+      [hud,infobox,footer].forEach(el => { if(el){ el.classList.remove('hidden'); } });
+      return;
     }
+    if(paused) return; // während Pause nicht verstecken
+    [hud,infobox,footer].forEach(el => {
+      if(!el) return;
+      if(state) el.classList.add('hidden');
+      else      el.classList.remove('hidden');
+    });
   }
 
-  function scheduleHide() {
-    if (!isLandscape()) return;
+  function scheduleHide(){
+    if(!isLandscape() || paused) return;
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => setHiddenState(true), 2500);
+    hideTimer = setTimeout(()=> setHidden(true), 2500);
   }
 
-  function showHUD() {
-    setHiddenState(false);
+  function showHUD(){
+    setHidden(false);
     scheduleHide();
   }
 
-  ['pointerdown', 'mousemove', 'touchstart', 'keydown', 'wheel'].forEach(evt => {
-    window.addEventListener(evt, showHUD, { passive: true });
+  // --- Globale Interaktionen: zeigen und (wenn Dropdown NICHT offen) Autohide wieder aktivieren
+  function wakeAndMaybeUnpause(){
+    if(!dropdownOpen){ paused = false; }
+    showHUD();
+  }
+  ['pointerdown','mousemove','touchstart','keydown','wheel']
+    .forEach(evt => window.addEventListener(evt, wakeAndMaybeUnpause, {passive:true}));
+
+  // Hover-Schutz (Desktop)
+  [hud, infobox, footer].forEach(el=>{
+    if(!el) return;
+    el.addEventListener('mouseenter', ()=> clearTimeout(hideTimer));
+    el.addEventListener('mouseleave', scheduleHide);
   });
 
-  hud.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-  hud.addEventListener('mouseleave', scheduleHide);
+  // --- Dropdown sauber handlen (Android/iOS)
+  if(select){
+    // Öffnen/Bedienen → Autohide pausieren
+    const openDropdown = ()=>{ dropdownOpen = true; paused = true; clearTimeout(hideTimer); setHidden(false); };
+    select.addEventListener('pointerdown', openDropdown, {passive:true});
+    select.addEventListener('touchstart', openDropdown, {passive:true});
+    select.addEventListener('focus', openDropdown);
 
-  window.matchMedia('(orientation: landscape)').addEventListener('change', showHUD);
+    // Auswahl getroffen → wieder autohide erlauben
+    select.addEventListener('change', ()=>{
+      dropdownOpen = false; paused = false; showHUD();
+    });
 
+    // Schließen ohne Änderung (manchmal blur sehr früh) → kurz verzögert wieder aktivieren
+    select.addEventListener('blur', ()=>{
+      setTimeout(()=>{ dropdownOpen = false; paused = false; scheduleHide(); }, 400);
+    });
+  }
+
+  // Orientation-Wechsel
+  window.matchMedia('(orientation: landscape)').addEventListener('change', ()=>{
+    dropdownOpen = false; paused = false; showHUD();
+  });
+
+  // Initial
   showHUD();
 })();
