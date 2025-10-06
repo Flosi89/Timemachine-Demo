@@ -2,9 +2,17 @@
   {
     "name": "Platz 1",
     "lat": 47.0495,
-    "lng": 8.31,
+    "lng": 8.3100,
     "radius": 120,
-    "text": "Fallback 1",
+    "text": "Historischer Ort im Tribschenquartier.",
     "image": "Bilder/platz1.jpg"
+  },
+  {
+    "name": "Werkhofstrasse",
+    "lat": 47.0445,
+    "lng": 8.3152,
+    "radius": 120,
+    "text": "Brennpunkt: Werkhofstrasse.",
+    "audio": "Audio/werkhofstrasse.mp3"
   }
 ]
