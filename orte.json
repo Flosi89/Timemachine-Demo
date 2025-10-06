@@ -9,8 +9,8 @@
   },
   {
     "name": "Brennpunkt: Werkhofstrasse",
-    "lat": 47.0445,
-    "lng": 8.3152,
+    "lat": 47.0445385, 
+    "lng": 8.3147987,
     "radius": 120,
     "text": "Leserbrief in der Luzerner Zeitung von 2011.",
     "audio": "Audio/Werkhofstrasse.mp3"
