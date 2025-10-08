@@ -8,11 +8,19 @@
     "image": "Bilder/platz1.jpg"
   },
   {
-    "name": "Brennpunkt: Werkhofstrasse",
-    "lat": 47.0445385, 
-    "lng": 8.3147987,
+    "name": "Werkhofstrasse",
+    "lat": 47.0445,
+    "lng": 8.3152,
     "radius": 120,
-    "text": "Leserbrief in der Luzerner Zeitung von 2011.",
-    "audio": "Audio/Werkhofstrasse.mp3"
+    "text": "Audioführung: Werkhofstrasse.",
+    "audio": "Audio/werkhofstrasse.mp3"
+  },
+  {
+    "name": "Weg zu Wagner",
+    "lat": 47.041978,
+    "lng": 8.325290,
+    "radius": 150,
+    "text": "Ein Spaziergang auf den Spuren von Richard Wagner.",
+    "audio": "Audio/wagner.mp3"
   }
 ]
