@@ -2,7 +2,7 @@
   {
     "name": "Platz 1",
     "lat": 47.0495,
-    "lng": 8.3100,
+    "lng": 8.31,
     "radius": 120,
     "text": "Historischer Ort im Tribschenquartier.",
     "image": "Bilder/platz1.jpg"
@@ -13,14 +13,15 @@
     "lng": 8.3152,
     "radius": 120,
     "text": "Audioführung: Werkhofstrasse.",
-    "audio": "Audio/Werkhofstrasse.mp3"
+    "audio": "Audio/werkhofstrasse.mp3"
   },
   {
     "name": "Weg zu Wagner",
     "lat": 47.041978,
-    "lng": 8.325290,
+    "lng": 8.32529,
     "radius": 150,
     "text": "Ein Spaziergang auf den Spuren von Richard Wagner.",
+    "image": "Bilder/wagnerweg.jpg",
     "audio": "Audio/wagner.mp3"
   }
 ]

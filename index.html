@@ -4,111 +4,74 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <title>Zeitreise Tribschen – Landscape UI</title>
-
-  <!-- Fonts & Leaflet CSS -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-  <!-- HUD Styles (inkl. Fixes) -->
+  <link rel="stylesheet" href="css/hud-landscape.css">
   <style>
-    :root{
-      --brand:#d5b27a;
-      --glass:rgba(25,19,15,.58);
-      --text:#f6f3ef;
-      --safe-top:env(safe-area-inset-top,0px);
-      --safe-bottom:env(safe-area-inset-bottom,0px)
-    }
+    :root{--brand:#d5b27a;--glass:rgba(25,19,15,.58);--text:#f6f3ef;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-
-    /* Kamera & Overlay */
     #camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:0;display:none}
     #imageOverlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;opacity:.7;transform-origin:center center;z-index:5;pointer-events:none !important}
-
-    /* Startscreen */
     .start-screen{position:fixed;inset:0;z-index:999;opacity:0;animation:fadeIn 900ms ease forwards}
     @keyframes fadeIn{from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)}}
-    .start-screen::before{content:"";position:absolute;inset:0;background-image:url("Bilder/zeppelin_tribschen.jpg");background-size:cover;background-position:center 35%;filter:sepia(.45) contrast(.92) brightness(.9);opacity:.86}
+    .start-screen::before{content:"";position:absolute;inset:0;background-image:url("Bilder/zeppelin_tribschen.jpg");background-size:cover;background-position:center 35%;filter:sepia(.45) contrast(.92) brightness(.9);opacity:.86;pointer-events:none}
     .start-screen::after{content:"";position:absolute;inset:0;background:radial-gradient(110% 85% at 50% 35%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);pointer-events:none}
     .stack{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%);width:min(92vw,720px);background:var(--glass);border-radius:20px;outline:1px solid rgba(255,255,255,.06);box-shadow:0 16px 42px rgba(0,0,0,.35);text-align:center;backdrop-filter:saturate(110%) blur(2px);padding:18px 26px 20px}
     h1{font-family:"Playfair Display",serif;font-weight:700;letter-spacing:.2px;font-size:clamp(26px,6.2vw,44px);line-height:1.12;margin:0 0 10px;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.28)}
     .subtitle{font-weight:600;letter-spacing:.2px;font-size:clamp(14px,4.2vw,18px);line-height:1.45;margin:0;opacity:.96}
-    .cta-wrap{position:absolute;left:50%;bottom:calc(28px + var(--safe-bottom));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+    .cta-wrap{position:absolute;left:50%;bottom:calc(28px + var(--safe-bottom));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;z-index:1001}
     .cta{display:inline-block;font-weight:800;letter-spacing:.3px;font-size:clamp(16px,4.6vw,18px);padding:14px 24px;border:0;border-radius:999px;background:linear-gradient(180deg,#e7c791,#caa66d);color:#1a130e;box-shadow:0 12px 26px rgba(0,0,0,.28);cursor:pointer}
     .cta:active{transform:translateY(1px);filter:brightness(.95)}
     .hint{font:600 13px/1.5 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:.92;text-align:center;text-shadow:0 1px 0 rgba(0,0,0,.25)}
-
-    /* HUD (oben) – immer klickbar */
     #hud, #hud * { pointer-events:auto !important; }
-    #hud{position:fixed;z-index:20;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;display:none}
+    #hud{position:fixed;z-index:20;top:10px;left:10px;right:10px;display:none;justify-content:space-between;align-items:center;gap:8px;}
     .place-select{max-width:56vw;height:36px;padding:4px 30px 4px 10px;font-size:13px;border-radius:10px;border:1px solid rgba(255,255,255,.15);color:#fff;background:rgba(0,0,0,.55);backdrop-filter:blur(6px) saturate(110%)}
     .icon-btn{width:40px;height:40px;display:inline-grid;place-items:center;font-size:18px;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.1);border-radius:10px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.22);cursor:pointer;transition:all .25s ease}
     .icon-btn:active{transform:translateY(1px)}
     .icon-btn.gps-active{background:var(--brand);color:#1a130e;animation:gpsPulse 1.5s ease-in-out 2}
     @keyframes gpsPulse{0%,100%{box-shadow:0 0 0 0 rgba(213,178,122,0);}50%{box-shadow:0 0 16px 4px rgba(213,178,122,0.7);}}
-
-    /* Infobox & Footer */
     #infobox{position:absolute;left:10px;right:10px;bottom:calc(70px + var(--safe-bottom));background:rgba(0,0,0,.8);padding:14px;border-radius:14px;z-index:15;display:none}
     #title{font-size:18px;font-weight:900;margin:0 0 6px 0}
     #desc{font-size:15px;opacity:.95;margin:0}
     #audio-btn{margin-top:10px;padding:10px 14px;border:none;border-radius:10px;background:var(--brand);color:#1a130e;font-weight:800;font-family:inherit;cursor:pointer}
     #footer{position:absolute;left:0;right:0;bottom:0;padding:0 14px calc(10px + var(--safe-bottom));z-index:14;display:none}
     #opacity{width:100%}
-
-    /* Karte */
     #mapWrap{position:absolute;inset:0;display:none;z-index:18}
     #map{position:absolute;inset:0}
   </style>
 </head>
 <body>
-  <!-- Startscreen -->
   <div class="start-screen" id="start">
     <div class="stack">
       <h1>Zeitreise Tribschen</h1>
       <p class="subtitle">Wo Luftschiffe landeten und Geschichten begannen.</p>
     </div>
     <div class="cta-wrap">
-      <button id="startbtn" class="cta">Zeitreise starten</button>
+      <button id="startbtn" class="cta" onclick="startApp()">Zeitreise starten</button>
       <div class="hint">Hinweis: Bitte Kamera- und Standort-Zugriff erlauben, wenn du gefragt wirst.</div>
     </div>
   </div>
-
-  <!-- HUD -->
   <div id="hud">
-    <select id="placeSelect" class="place-select">
-      <option value="">Ort wählen…</option>
-    </select>
+    <select id="placeSelect" class="place-select"><option value="">Ort wählen…</option></select>
     <div style="display:flex; gap:8px">
       <button id="gpsBtn" class="icon-btn" title="GPS">📍</button>
       <button id="toggleMap" class="icon-btn" title="Karte/Kamera">🗺️</button>
     </div>
   </div>
-
-  <!-- Kamera & Overlay -->
   <video id="camera" autoplay playsinline webkit-playsinline muted></video>
   <img id="imageOverlay" alt="Overlay">
-
-  <!-- Karte -->
   <div id="mapWrap"><div id="map"></div></div>
-
-  <!-- Infobox -->
   <div id="infobox" class="info-box">
     <h3 id="title"></h3>
     <p id="desc"></p>
     <button id="audio-btn">▶️ Audio abspielen</button>
     <audio id="audio" preload="auto"></audio>
   </div>
-
-  <!-- Footer Slider -->
-  <div id="footer" class="zoom-wrap">
-    <input id="opacity" type="range" min="0" max="100" value="70">
-  </div>
-
-  <!-- Scripts -->
+  <div id="footer" class="zoom-wrap"><input id="opacity" type="range" min="0" max="100" value="70"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+  <script src="js/hud-autohide.js"></script>
   <script>
-    const startbtn = document.getElementById('startbtn');
     const camera = document.getElementById('camera');
     const imageOverlay = document.getElementById('imageOverlay');
     const hud = document.getElementById('hud');
@@ -128,7 +91,7 @@
     let manual = false;
     let map = null;
     let mapVisible = false;
-    let currentPlaceIndex = -1; // <-- NEU: aktiver Ort
+    let currentPlaceIndex = -1;
 
     async function startCamera(){
       try{
@@ -171,7 +134,6 @@
     function showPlace(p, index){
       if(!p) return;
 
-      // Bild setzen / entfernen
       if(p.image){
         imageOverlay.onload=()=>{ imageOverlay.style.display='block'; };
         imageOverlay.onerror=()=>{ console.warn('Bildfehler:', p.image); imageOverlay.style.display='none'; };
@@ -181,14 +143,11 @@
         imageOverlay.removeAttribute('src');
       }
 
-      // Texte
       titleEl.textContent=p.name||'';
       descEl.textContent=p.text||'';
 
-      // Audio (ohne Reset, wenn gleicher Ort)
       if(p.audio){
         const newSrc = p.audio+(p.audio.includes('?')?'&':'?')+'v='+Date.now();
-        // Nur Quelle setzen, wenn Ort gewechselt wurde
         if(index !== currentPlaceIndex){
           audioPlayer.src = newSrc;
           audioBtn.textContent='▶️ Audio abspielen';
@@ -208,7 +167,7 @@
       }
 
       infobox.style.display=(p.text||p.audio)?'block':'none';
-      currentPlaceIndex = (typeof index === 'number') ? index : currentPlaceIndex; // aktiv setzen
+      currentPlaceIndex = (typeof index === 'number') ? index : currentPlaceIndex;
     }
 
     function setupGPS(){
@@ -223,7 +182,6 @@
         }
         if(best){
           const rKm=((best.radius ?? best.radius_m ?? 100)/1000);
-          // Nur wechseln, wenn innerhalb Radius UND anderer Ort
           if(bestKm<=rKm && bestIdx !== currentPlaceIndex){
             showPlace(best, bestIdx);
           }
@@ -231,19 +189,6 @@
       }, err=> console.warn('GPS:', err.message), {enableHighAccuracy:true});
     }
 
-    // Overlay-Transparenz
-    opacity.addEventListener('input', ()=> imageOverlay.style.opacity = opacity.value/100 );
-
-    // Overlay verschieben
-    imageOverlay.style.touchAction='none';
-    let drag=false,last={x:0,y:0}, st={x:0,y:0,scale:1,rot:0};
-    function apply(){ imageOverlay.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale}) rotate(${st.rot}deg)`; }
-    imageOverlay.addEventListener('pointerdown', e=>{ if(e.target.closest('#footer')) return; drag=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); });
-    imageOverlay.addEventListener('pointermove', e=>{ if(!drag) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; st.x+=dx; st.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); });
-    imageOverlay.addEventListener('pointerup', ()=> drag=false);
-    imageOverlay.addEventListener('pointercancel', ()=> drag=false);
-
-    // Karte
     function initMap(){
       if(map){ setTimeout(()=>map.invalidateSize(),0); return; }
       map = L.map('map', { zoomControl:true });
@@ -265,4 +210,66 @@
             });}
           },50);
         });
-        bounds.push([
+        bounds.push([p.lat,p.lng]);
+      });
+      if(bounds.length) map.fitBounds(bounds,{padding:[40,40]});
+    }
+
+    function toggleMap(force){
+      mapVisible = (typeof force==='boolean') ? force : !mapVisible;
+      mapWrap.style.display = mapVisible ? 'block' : 'none';
+      camera.style.display = mapVisible ? 'none' : 'block';
+      imageOverlay.style.display = mapVisible ? 'none' : imageOverlay.style.display;
+      infobox.style.display = mapVisible ? 'none' : infobox.style.display;
+      toggleMapBtn.textContent = mapVisible ? '📷' : '🗺️';
+      if(mapVisible){ setTimeout(()=>{ initMap(); map.invalidateSize(); }, 0); }
+    }
+    toggleMapBtn.addEventListener('click', ()=> toggleMap());
+
+    // UI interactions
+    opacity.addEventListener('input', ()=> imageOverlay.style.opacity = opacity.value/100 );
+
+    imageOverlay.style.touchAction='none';
+    let drag=false,last={x:0,y:0}, st={x:0,y:0,scale:1,rot:0};
+    function apply(){ imageOverlay.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale}) rotate(${st.rot}deg)`; }
+    imageOverlay.addEventListener('pointerdown', e=>{ if(e.target.closest('#footer')) return; drag=true; last={x:e.clientX,y:e.clientY}; imageOverlay.setPointerCapture(e.pointerId); });
+    imageOverlay.addEventListener('pointermove', e=>{ if(!drag) return; const dx=e.clientX-last.x, dy=e.clientY-last.y; st.x+=dx; st.y+=dy; last={x:e.clientX,y:e.clientY}; apply(); });
+    imageOverlay.addEventListener('pointerup', ()=> drag=false);
+    imageOverlay.addEventListener('pointercancel', ()=> drag=false);
+
+    // Manuelle Auswahl
+    placeSelect.addEventListener('change', ()=>{
+      const i = placeSelect.value ? parseInt(placeSelect.value,10) : NaN;
+      if(!isNaN(i) && places[i]){
+        manual = true;
+        showPlace(places[i], i);
+      }
+    });
+
+    // GPS-Schalter Feedback
+    gpsBtn.addEventListener('click',()=>{
+      manual=false;
+      gpsBtn.classList.add('gps-active');
+      setTimeout(()=>gpsBtn.classList.remove('gps-active'),3000);
+    });
+
+    // Startfunktion (Direkt aus Button onclick aufgerufen)
+    async function startApp(){
+      try{
+        document.getElementById('start')?.remove();
+        camera.style.display='block';
+        hud.style.display='flex';
+        footer.style.display='block';
+        await startCamera();
+        await loadPlaces();
+        setupGPS();
+      }catch(err){
+        console.warn('Startfehler:', err);
+        alert('Konnte nicht starten: ' + (err?.message || err));
+      }
+    }
+    const startbtn = document.getElementById('startbtn');
+    startbtn?.addEventListener('click', (e)=>{ e.preventDefault(); startApp(); });
+  </script>
+</body>
+</html>
