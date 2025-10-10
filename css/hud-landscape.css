@@ -105,3 +105,14 @@
   #footer.zoom-wrap.hidden{ opacity: 0; pointer-events: none; }
   #footer.zoom-wrap #opacity{ height: 4px; }
 }
+/* Fix: Startscreen-Overlays dürfen keine Klicks abfangen */
+.start-screen::before,
+.start-screen::after{
+  pointer-events: none !important;
+}
+
+/* Falls mal anderswo was blockiert: Button + Inhalt immer klickbar */
+.start-screen,
+.start-screen *{
+  pointer-events: auto !important;
+}
